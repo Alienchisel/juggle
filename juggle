@@ -985,6 +985,25 @@ show_stats() {
         END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
     ' "$DATA_FILE")
 
+    # Zone: % of last 20 trials >= all-time 75th-percentile threshold
+    local zone_pct=0 zone_threshold=0
+    zone_threshold=$(awk -F',' '
+        { vals[NR] = $3 }
+        END {
+            n = NR
+            for (i = 1; i <= n; i++)
+                for (j = i + 1; j <= n; j++)
+                    if (vals[j] < vals[i]) { t = vals[i]; vals[i] = vals[j]; vals[j] = t }
+            idx = int(n * 0.75) + 1
+            if (idx > n) idx = n
+            print vals[idx] + 0
+        }
+    ' "$DATA_FILE")
+    zone_pct=$(tail -n20 "$DATA_FILE" | awk -F',' -v thr="$zone_threshold" '
+        { t++; if ($3 >= thr) g++ }
+        END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
+    ')
+
     # Nemesis: most-repeated score strictly below the Apex (ties broken by higher score)
     local nemesis_score=0 nemesis_count=0
     read -r nemesis_score nemesis_count <<< "$(awk -F',' -v pb="$pb" '
@@ -1071,6 +1090,7 @@ show_stats() {
     echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(10th percentile, last 20 trials)${RESET}"
     echo -e "  ${BOLD}Ceiling       :${RESET}  ${ceiling_val} catches  ${DIM}(90th percentile, last 20 trials)${RESET}"
     echo -e "  ${BOLD}Steadfastness :${RESET}  ${consist_recent}%  ${DIM}(last 20)  /  ${consist_alltime}% all-time${RESET}"
+    echo -e "  ${BOLD}Zone          :${RESET}  ${zone_pct}%  ${DIM}(last 20)  ≥ ${zone_threshold} catches${RESET}"
     if (( nemesis_count >= 2 )); then
         echo -e "  ${BOLD}Nemesis       :${RESET}  ${RED}${nemesis_score} catches${RESET}  ${DIM}(${nemesis_count} times)${RESET}"
     fi
