@@ -4,11 +4,14 @@
 #
 # Commands:
 #   juggle <number>       Log a trial (catches before a drop)
-#   juggle scores         Show top 10 high scores
-#   juggle scores <N>     Show top N high scores
-#   juggle scores all     Show full record, oldest first
-#   juggle stats          Show full stats: Title, Apex record, distribution,
-#                         chains, trend, and last 20 trials chart
+#   juggle top            Show top 10 Triumphs
+#   juggle top <N>        Show top N Triumphs
+#   juggle top all        Show full record, oldest first
+#   juggle stats          The Reckoning: Title, Apex record, Auguries,
+#                         Trial Ledger, trend, and last 20 trials chart
+#   juggle pb             Apex record table in isolation
+#   juggle trend          Week/month comparisons & 12-week sparkline
+#   juggle today          Daily summary: trials, best, avg vs all-time
 #   juggle last           Show the most recent entry
 #   juggle undo           Remove the most recent entry (with confirmation)
 #   juggle --help         Show usage help
@@ -17,7 +20,7 @@
 #   scores.csv            Every trial: date,time,catches
 #   milestones.csv        Omen log (fired omens): type,key
 #   pb_history.csv        Apex record: date,time,catches
-#   streak_state.csv      Chain peak, last chain, spree count, spree peak, dominance state
+#   streak_state.csv      Chain peak, spree count, dominance state
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
 if command -v readlink >/dev/null 2>&1; then
@@ -29,7 +32,7 @@ DATA_DIR="${JUGGLE_DATA_DIR:-$SCRIPT_DIR/juggle-data}"
 DATA_FILE="$DATA_DIR/scores.csv"
 MILESTONE_FILE="$DATA_DIR/milestones.csv"
 PB_FILE="$DATA_DIR/pb_history.csv"
-STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,last_streak,spree_count,spree_peak,dominance_active,dominance_cooldown
+STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_active
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -71,15 +74,26 @@ init_data() {
         fi
     fi
 
-    # streak_state.csv: streak_peak,last_streak,spree_count,spree_peak,dominance_active,dominance_cooldown
-    [[ ! -s "$STREAK_FILE" ]] && echo "0,0,0,0,0,0" > "$STREAK_FILE"
-    # Migrate older formats if needed
+    # Backfill pb_history.csv from scores.csv if incomplete
+    if [[ -s "$DATA_FILE" ]]; then
+        local expected_pb_count actual_pb_count
+        expected_pb_count=$(awk -F',' 'BEGIN{max=0} $3>max{max=$3; c++} END{print c+0}' "$DATA_FILE")
+        actual_pb_count=0
+        [[ -s "$PB_FILE" ]] && actual_pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
+        if (( expected_pb_count > actual_pb_count )); then
+            awk -F',' 'BEGIN{max=0} $3>max{max=$3; print}' "$DATA_FILE" > "$PB_FILE"
+        fi
+    fi
+
+    # streak_state.csv: streak_peak,spree_count,dominance_active
+    [[ ! -s "$STREAK_FILE" ]] && echo "0,0,0" > "$STREAK_FILE"
+    # Migrate 6-field format to 3-field format
     local fields
     fields=$(awk -F',' 'NR==1{print NF; exit}' "$STREAK_FILE")
-    if (( fields < 6 )); then
-        local f1 f2 f3 f4
-        IFS=',' read -r f1 f2 f3 f4 _ < "$STREAK_FILE"
-        echo "${f1:-0},${f2:-0},${f3:-0},${f4:-0},0,0" > "$STREAK_FILE"
+    if (( fields == 6 )); then
+        local f1 f3 f5
+        IFS=',' read -r f1 _ f3 _ f5 _ < "$STREAK_FILE"
+        echo "${f1:-0},${f3:-0},${f5:-0}" > "$STREAK_FILE"
     fi
 }
 
@@ -89,6 +103,17 @@ all_scores_sorted() {
 
 personal_best() {
     awk -F',' 'NR==1 || $3>max {max=$3} END {print max+0}' "$DATA_FILE"
+}
+
+echo_count() {
+    local pb=$1
+    if (( pb == 0 )) || [[ ! -s "$PB_FILE" ]]; then echo 0; return; fi
+    local apex_date
+    apex_date=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
+    awk -F',' -v pb="$pb" -v d="$apex_date" '
+        $1 >= d && $3 == pb { n++ }
+        END { print n+0 }
+    ' "$DATA_FILE"
 }
 
 total_sessions() {
@@ -130,27 +155,27 @@ get_rank() {
     local pb=$1
     local title colour
 
-    if   (( pb >= 1000 )); then title="Ball Immortal";   colour="${YELLOW}${BOLD}"
-    elif (( pb >= 750  )); then title="Ball Paragon";     colour="${RED}"
-    elif (( pb >= 500  )); then title="Ball Legend";      colour="${RED}"
-    elif (( pb >= 400  )); then title="Ball Colossus";    colour="${MAGENTA}"
-    elif (( pb >= 300  )); then title="Ball Revenant";    colour="${MAGENTA}"
-    elif (( pb >= 250  )); then title="Ball Empyrean";    colour="${MAGENTA}"
-    elif (( pb >= 200  )); then title="Ball Specter";     colour="${YELLOW}"
-    elif (( pb >= 175  )); then title="Ball Auric";       colour="${YELLOW}"
-    elif (( pb >= 150  )); then title="Ball Oracle";      colour="${YELLOW}"
-    elif (( pb >= 125  )); then title="Ball Luminant";    colour="${YELLOW}"
-    elif (( pb >= 100  )); then title="Ball Sovereign";   colour="${GREEN}"
-    elif (( pb >= 75   )); then title="Ball Phantom";     colour="${GREEN}"
-    elif (( pb >= 50   )); then title="Ball Sage";        colour="${GREEN}"
-    elif (( pb >= 40   )); then title="Ball Conjuror";    colour="${CYAN}"
-    elif (( pb >= 30   )); then title="Ball Harbinger";   colour="${CYAN}"
-    elif (( pb >= 25   )); then title="Ball Knight";      colour="${CYAN}"
-    elif (( pb >= 20   )); then title="Ball Keeper";      colour="${CYAN}"
-    elif (( pb >= 15   )); then title="Ball Adept";       colour=""
-    elif (( pb >= 10   )); then title="Ball Initiate";    colour=""
-    elif (( pb >= 5    )); then title="Ball Apprentice";  colour=""
-    else                        title="Ball Neophyte";    colour=""
+    if   (( pb >= 1000 )); then title="Immortal";   colour="${YELLOW}${BOLD}"
+    elif (( pb >= 750  )); then title="Paragon";     colour="${RED}"
+    elif (( pb >= 500  )); then title="Legend";      colour="${RED}"
+    elif (( pb >= 400  )); then title="Colossus";    colour="${MAGENTA}"
+    elif (( pb >= 300  )); then title="Revenant";    colour="${MAGENTA}"
+    elif (( pb >= 250  )); then title="Empyrean";    colour="${MAGENTA}"
+    elif (( pb >= 200  )); then title="Specter";     colour="${YELLOW}"
+    elif (( pb >= 175  )); then title="Auric";       colour="${YELLOW}"
+    elif (( pb >= 150  )); then title="Oracle";      colour="${YELLOW}"
+    elif (( pb >= 125  )); then title="Luminant";    colour="${YELLOW}"
+    elif (( pb >= 100  )); then title="Sovereign";   colour="${GREEN}"
+    elif (( pb >= 75   )); then title="Phantom";     colour="${GREEN}"
+    elif (( pb >= 50   )); then title="Sage";        colour="${GREEN}"
+    elif (( pb >= 40   )); then title="Conjuror";    colour="${CYAN}"
+    elif (( pb >= 30   )); then title="Harbinger";   colour="${CYAN}"
+    elif (( pb >= 25   )); then title="Knight";      colour="${CYAN}"
+    elif (( pb >= 20   )); then title="Keeper";      colour="${CYAN}"
+    elif (( pb >= 15   )); then title="Adept";       colour=""
+    elif (( pb >= 10   )); then title="Initiate";    colour=""
+    elif (( pb >= 5    )); then title="Apprentice";  colour=""
+    else                        title="Neophyte";    colour=""
     fi
 
     echo "${colour}${title}${RESET}"
@@ -241,24 +266,44 @@ log_score() {
         update_pb_history "$catches" "$today" "$now"
     fi
 
+    local total
+    total=$(total_sessions)
+
     echo ""
 
+    if (( total > 1 )); then
+        local prev_date
+        prev_date=$(tail -n2 "$DATA_FILE" | head -n1 | cut -d',' -f1)
+        local days_since
+        days_since=$(( ( $(date -d "$today" +%s) - $(date -d "$prev_date" +%s) ) / 86400 ))
+        if (( days_since >= 7 )); then
+            echo -e "  ${DIM}${days_since} days absent.${RESET}"
+            echo ""
+        fi
+    fi
+
     if (( catches > pb )); then
-        echo -e "  ${YELLOW}${BOLD}★  NEW PERSONAL RECORD!  ★${RESET}"
-        echo -e "  ${GREEN}${BOLD}${catches} catches${RESET} — you beat your old best of ${pb}!"
+        echo -e "  ${YELLOW}${BOLD}A new Apex is set.${RESET}"
+        echo -e "  ${GREEN}${BOLD}${catches} catches.${RESET} The old Apex of ${pb} is surpassed."
     elif (( catches == pb && pb > 0 )); then
         echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} So close to breaking it…"
     elif (( pb > 0 && catches >= pb * 80 / 100 )); then
-        echo -e "  ${GREEN}Strong trial!${RESET} ${BOLD}${catches} catches${RESET} — within striking distance of your best (${pb})."
+        echo -e "  ${GREEN}A worthy trial.${RESET} ${BOLD}${catches} catches${RESET} — within striking distance of your best (${pb})."
     else
-        echo -e "  ${BOLD}${catches} catches${RESET} logged. Keep at it — your best is ${pb}!"
+        echo -e "  ${BOLD}${catches} catches.${RESET} The Apex of ${pb} endures."
     fi
 
-    # Show current rank (use new pb if record was just broken)
     local display_pb=$(( catches > pb ? catches : pb ))
-    local rank_title
-    rank_title=$(get_rank "$display_pb")
-    echo -e "  ${DIM}Title:${RESET}  ${rank_title}"
+    if (( catches > pb && pb > 0 )); then
+        local new_rank old_rank_plain
+        new_rank=$(get_rank "$catches")
+        local new_rank_plain
+        new_rank_plain=$(echo -e "$new_rank" | sed 's/\x1b\[[0-9;]*m//g')
+        old_rank_plain=$(echo -e "$(get_rank "$pb")" | sed 's/\x1b\[[0-9;]*m//g')
+        if [[ "$new_rank_plain" != "$old_rank_plain" ]]; then
+            echo -e "  Title claimed: ${new_rank}"
+        fi
+    fi
     echo ""
 
     local rank
@@ -268,13 +313,10 @@ log_score() {
         END { print rank+0 }
     ')
 
-    local total
-    total=$(total_sessions)
-
     if (( rank == 1 )); then
-        echo -e "  ${YELLOW}You are #1 on the leaderboard!${RESET}"
+        echo -e "  ${YELLOW}You are #1 in the Annals!${RESET}"
     else
-        echo -e "  You rank ${BOLD}#${rank}${RESET} out of ${total} trial(s)."
+        echo -e "  You rank ${BOLD}#${rank}${RESET} out of ${total} trials."
     fi
 
     echo ""
@@ -282,7 +324,25 @@ log_score() {
     check_milestones "$catches" "$total" "$today" "$pb"
 
     print_grade "$catches" "$display_pb"
-    show_scores 10
+
+    # ── Augury line ────────────────────────────────────────────────────────────
+    local _sp _sc _da
+    IFS=',' read -r _sp _sc _da < "$STREAK_FILE"
+    local _cur_streak
+    read -r _cur_streak _ <<< "$(calc_streaks)"
+    local _echo_count
+    _echo_count=$(echo_count "$display_pb")
+    local _aug_parts=()
+    (( _cur_streak >= 2      )) && _aug_parts+=("Chain ${_cur_streak}")
+    (( ${_sc:-0} >= 3        )) && _aug_parts+=("Spree ${_sc}")
+    (( ${_da:-0}             )) && _aug_parts+=("Dominance")
+    (( _echo_count >= 3      )) && _aug_parts+=("Echo")
+    if (( ${#_aug_parts[@]} > 0 )); then
+        local _aug_line
+        _aug_line=$(printf '%s  ·  ' "${_aug_parts[@]}")
+        echo -e "  ${DIM}${_aug_line%  ·  }${RESET}"
+        echo ""
+    fi
 }
 
 # ── Omens ─────────────────────────────────────────────────────────────────────
@@ -302,37 +362,12 @@ check_milestones() {
     local bkey="birthday_${birth_year}"
     if [[ "$month_day" == "09-15" ]] && ! milestone_fired "birthday" "$bkey"; then
         record_milestone "birthday" "$bkey"
-        print_milestone "${YELLOW}${BOLD}🎂 Happy Birthday! Now stop reading this and go juggle some cake.${RESET}"
-        any=1
-    fi
-
-    # ── Hacker number catches ──────────────────────────────────────────────────
-    declare -A hacker_msgs=(
-        [13]="Unlucky for some."
-        [22]="SSH. You're in."
-        [53]="DNS. It's always DNS."
-        [69]="Symmetry achieved."
-        [80]="Hope you're not running plaintext."
-        [404]="Omen not found."
-        [443]="Encrypted. Nice."
-        [666]="Daemon initialized."
-        [1337]="You speak the old tongue."
-        [8080]="The other HTTP. Classic dev move."
-        [9000]="It's over 9000."
-    )
-    if [[ -n "${hacker_msgs[$catches]+_}" ]] && ! milestone_fired "hacker" "$catches"; then
-        record_milestone "hacker" "$catches"
-        print_milestone "${GREEN}// ${hacker_msgs[$catches]}${RESET}"
+        print_milestone "${YELLOW}${BOLD}Happy Birthday! Now stop reading this and go juggle some cake.${RESET}"
         any=1
     fi
 
     # ── 1. Catch-count thresholds ──────────────────────────────────────────────
-    local catch_thresholds=(5 10 15 20 25 30 40 50 75 100 150 200)
-    local m=250
-    while (( catches >= m )); do
-        catch_thresholds+=("$m")
-        (( m += 50 ))
-    done
+    local catch_thresholds=(5 10 15 20 25 30 40 50 75 100 150 200 250 300 400 500 750 1000)
 
     local best_catch_threshold=0
     for m in "${catch_thresholds[@]}"; do
@@ -350,287 +385,84 @@ check_milestones() {
                 record_milestone "catch" "$m"
             fi
         done
-        print_milestone "${YELLOW}🎯 First time reaching ${best_catch_threshold} catches!${RESET}"
+        print_milestone "${YELLOW}First time reaching ${best_catch_threshold} catches.${RESET}"
         any=1
     fi
 
     # ── 2. Trial count omens ───────────────────────────────────────────────────
-    local session_milestones=(5 10 25 50 75 100 150 200)
+    local session_milestones=(5 10 25 50 75 100 150 200 300 400 500 750 1000 1500 2000 3000 5000)
     for m in "${session_milestones[@]}"; do
         if (( total == m )) && ! milestone_fired "session" "$m"; then
             record_milestone "session" "$m"
-            print_milestone "${CYAN}🎳 ${m} trials logged!${RESET}"
-            any=1
-        fi
-    done
-    if (( total > 200 )); then
-        local hundreds=$(( (total / 100) * 100 ))
-        if (( hundreds > 200 && total == hundreds )) && ! milestone_fired "session" "$hundreds"; then
-            record_milestone "session" "$hundreds"
-            if (( hundreds % 10000 == 0 )); then
-                print_milestone "${MAGENTA}${BOLD}🌟🌟🌟 ${hundreds} TRIALS! A truly legendary juggler. 🌟🌟🌟${RESET}"
-            elif (( hundreds % 1000 == 0 )); then
-                print_milestone "${YELLOW}${BOLD}🌟🌟 ${hundreds} trials! Extraordinary dedication. 🌟🌟${RESET}"
+            if (( m >= 1000 )); then
+                print_milestone "${MAGENTA}${BOLD}${m} TRIALS. The abyss has claimed you.${RESET}"
+            elif (( m >= 500 )); then
+                print_milestone "${YELLOW}${BOLD}${m} trials. The depths bear witness.${RESET}"
             else
-                print_milestone "${CYAN}🎳 ${hundreds} trials logged!${RESET}"
+                print_milestone "${CYAN}${m} trials inscribed in the Annals.${RESET}"
             fi
             any=1
         fi
-    fi
-
-    # ── 3. Monthly average omens ───────────────────────────────────────────────
-    local this_month
-    this_month=$(date +%Y-%m)
-    local month_avg
-    month_avg=$(awk -F',' -v m="$this_month" '
-        $1 ~ m {s+=$2; n++}
-        END {if(n>0) printf "%.1f", s/n; else print "0"}
-    ' "$DATA_FILE")
-
-    local best_avg_threshold=0
-    local threshold=5
-    while awk "BEGIN {exit !($month_avg >= $threshold)}"; do
-        local mkey="${this_month}_avg_${threshold}"
-        if ! milestone_fired "monthavg" "$mkey"; then
-            best_avg_threshold=$threshold
-        fi
-        (( threshold += 5 ))
     done
-    if (( best_avg_threshold > 0 )); then
-        threshold=5
-        while (( threshold <= best_avg_threshold )); do
-            local mkey="${this_month}_avg_${threshold}"
-            ! milestone_fired "monthavg" "$mkey" && record_milestone "monthavg" "$mkey"
-            (( threshold += 5 ))
-        done
-        print_milestone "${GREEN}📅 This month's average has crossed ${best_avg_threshold} catches!${RESET}"
-        any=1
-    fi
 
-    # ── 4. Comeback ────────────────────────────────────────────────────────────
-    if (( total > 1 )); then
-        local prev_date
-        prev_date=$(tail -n2 "$DATA_FILE" | head -n1 | cut -d',' -f1)
-        local days_since
-        days_since=$(( ( $(date -d "$today" +%s) - $(date -d "$prev_date" +%s) ) / 86400 ))
-        if (( days_since >= 7 )); then
-            print_milestone "${GREEN}👋 Welcome back! It's been ${days_since} days since your last trial.${RESET}"
-            any=1
-        fi
-    fi
-
-    # ── 5. Apex anniversary ───────────────────────────────────────────────────
-    local pb_date pb_session_num
-    read -r pb_date pb_session_num <<< "$(awk -F',' -v pb="$pb" '
-        $2 == pb && !found { print $1, NR; found=1 }
-    ' "$DATA_FILE")"
-
-    if [[ -n "$pb_date" ]]; then
-        local days_since_pb
-        days_since_pb=$(( ( $(date -d "$today" +%s) - $(date -d "$pb_date" +%s) ) / 86400 ))
-        local sessions_since_pb=$(( total - pb_session_num ))
-
-        local day_thresholds=(7 14 30)
-        local dt=60
-        while (( days_since_pb >= dt )); do
-            day_thresholds+=("$dt")
-            (( dt += 30 ))
-        done
-        local best_day_threshold=0
-        for dt in "${day_thresholds[@]}"; do
-            if (( days_since_pb >= dt )); then
-                local dkey="pb_days_${pb}_${dt}"
-                ! milestone_fired "pbanniv" "$dkey" && best_day_threshold=$dt
-            fi
-        done
-        if (( best_day_threshold > 0 )); then
-            for dt in "${day_thresholds[@]}"; do
-                if (( dt <= best_day_threshold )); then
-                    local dkey="pb_days_${pb}_${dt}"
-                    ! milestone_fired "pbanniv" "$dkey" && record_milestone "pbanniv" "$dkey"
-                fi
-            done
-            print_milestone "${MAGENTA}📌 Your Apex of ${pb} catches is ${best_day_threshold}+ days old — time to break it!${RESET}"
-            any=1
-        fi
-
-        local sess_thresholds=(10 25)
-        local st=50
-        while (( sessions_since_pb >= st )); do
-            sess_thresholds+=("$st")
-            (( st += 25 ))
-        done
-        local best_sess_threshold=0
-        for st in "${sess_thresholds[@]}"; do
-            if (( sessions_since_pb >= st )); then
-                local skey="pb_sess_${pb}_${st}"
-                ! milestone_fired "pbanniv" "$skey" && best_sess_threshold=$st
-            fi
-        done
-        if (( best_sess_threshold > 0 )); then
-            for st in "${sess_thresholds[@]}"; do
-                if (( st <= best_sess_threshold )); then
-                    local skey="pb_sess_${pb}_${st}"
-                    ! milestone_fired "pbanniv" "$skey" && record_milestone "pbanniv" "$skey"
-                fi
-            done
-            print_milestone "${MAGENTA}📌 ${best_sess_threshold} trials since your last Apex of ${pb} — it's waiting to be broken!${RESET}"
-            any=1
-        fi
-    fi
-
-    # ── 7. Chain omens ─────────────────────────────────────────────────────────
-    # Read streak state: streak_peak,last_streak,spree_count,spree_peak,dominance_active,dominance_cooldown
-    local streak_peak streak_last spree_count spree_peak dominance_active dominance_cooldown
-    IFS=',' read -r streak_peak streak_last spree_count spree_peak dominance_active dominance_cooldown < "$STREAK_FILE"
+    # ── 3. Augury state update ─────────────────────────────────────────────────
+    local streak_peak spree_count dominance_active
+    IFS=',' read -r streak_peak spree_count dominance_active < "$STREAK_FILE"
     streak_peak=${streak_peak:-0}
-    streak_last=${streak_last:-0}
     spree_count=${spree_count:-0}
-    spree_peak=${spree_peak:-0}
     dominance_active=${dominance_active:-0}
-    dominance_cooldown=${dominance_cooldown:-0}
 
-    # Calculate current streak length
     local cur_streak best_streak
     read -r cur_streak best_streak <<< "$(calc_streaks)"
 
-    # Check if chain was broken since last trial
+    # Chain peak
     if (( streak_peak >= 3 && cur_streak == 1 && total > 1 )); then
-        print_milestone "${DIM}Chain of ${streak_last} days ended.${RESET}"
-        any=1
         streak_peak=0
     fi
-
-    # Build list of streak thresholds
-    local streak_thresholds=(3 7 14 30 60 90 180 365)
-    local t=730
-    while (( cur_streak >= t )); do
-        streak_thresholds+=("$t")
-        (( t += 365 ))
-    done
-
-    # Find highest unfired streak threshold
-    local best_streak_threshold=0
+    local streak_thresholds=(3 7 14 30 60 90 180 365 730)
     for t in "${streak_thresholds[@]}"; do
         if (( cur_streak >= t && t > streak_peak )); then
-            best_streak_threshold=$t
+            streak_peak=$t
         fi
     done
 
-    if (( best_streak_threshold > 0 )); then
-        local smsg
-        if (( best_streak_threshold % 365 == 0 && best_streak_threshold >= 365 )); then
-            local years=$(( best_streak_threshold / 365 ))
-            if (( years == 1 )); then
-                smsg="${best_streak_threshold} days in a row. A full year."
-            else
-                smsg="${best_streak_threshold} days in a row. ${years} years."
-            fi
-        else
-            smsg="${best_streak_threshold} days in a row."
-        fi
-        print_milestone "${GREEN}⛓  ${smsg}${RESET}"
-        any=1
-        streak_peak=$best_streak_threshold
-    fi
-
-    # ── 8. Spree omens ─────────────────────────────────────────────────────────
-    # Determine if this trial is B or above (>= 50% of pb)
+    # Spree
     local display_pb_for_spree=$(( catches > pb ? catches : pb ))
     local is_good_session=0
     if (( display_pb_for_spree > 0 )); then
         local pct=$(( catches * 100 / display_pb_for_spree ))
         (( pct >= 50 )) && is_good_session=1
     fi
-
     if (( is_good_session )); then
         (( spree_count++ ))
-
-        # Build spree thresholds: 3,5,7,10,15 then every 5
-        local spree_thresholds=(3 5 7 10 15)
-        local s=20
-        while (( spree_count >= s )); do
-            spree_thresholds+=("$s")
-            (( s += 5 ))
-        done
-
-        # Find highest unfired spree threshold
-        local best_spree_threshold=0
-        for s in "${spree_thresholds[@]}"; do
-            if (( spree_count >= s && s > spree_peak )); then
-                best_spree_threshold=$s
-            fi
-        done
-
-        if (( best_spree_threshold > 0 )); then
-            local spree_msg
-            if   (( best_spree_threshold >= 15 )); then spree_msg="Godlike!"
-            elif (( best_spree_threshold >= 10 )); then spree_msg="Unstoppable!"
-            elif (( best_spree_threshold >=  7 )); then spree_msg="Dominating!"
-            elif (( best_spree_threshold >=  5 )); then spree_msg="Rampage!"
-            else                                        spree_msg="Balling Spree!"
-            fi
-            print_milestone "${CYAN}🎯 ${spree_msg}${RESET}"
-            any=1
-            spree_peak=$best_spree_threshold
-        fi
     else
-        # Bad trial — check if spree is ending
-        if (( spree_peak >= 3 )); then
-            print_milestone "${DIM}Spree of ${spree_count} trials ended.${RESET}"
-            any=1
-        fi
         spree_count=0
-        spree_peak=0
     fi
 
-    # ── 9. Dominance omen ──────────────────────────────────────────────────────
-    # Fires when >= 5 of last 10 trials are S+ (>= 80% of current pb)
+    # Dominance
     local effective_pb=$(( catches > pb ? catches : pb ))
-    local dom_now=0
+    dominance_active=0
     if (( effective_pb > 0 && total >= 10 )); then
         local s_count
         s_count=$(tail -n10 "$DATA_FILE" | awk -F',' -v pb="$effective_pb" '
             { pct = ($3 * 100) / pb; if (pct >= 80) count++ }
             END { print count+0 }
         ')
-        (( s_count >= 5 )) && dom_now=1
-    fi
-
-    # Tick down cooldown
-    (( dominance_cooldown > 0 )) && (( dominance_cooldown-- ))
-
-    if (( dom_now )); then
-        if (( dominance_active == 0 || dominance_cooldown == 0 )); then
-            print_milestone "${YELLOW}👁  Dominating!${RESET}"
-            any=1
-            dominance_active=1
-            dominance_cooldown=10
-        fi
-    else
-        if (( dominance_active == 1 )); then
-            print_milestone "${DIM}Dominance faded.${RESET}"
-            any=1
-            dominance_active=0
-            dominance_cooldown=0
-        fi
+        (( s_count >= 5 )) && dominance_active=1
     fi
 
     # Save updated state
-    echo "${streak_peak},${cur_streak},${spree_count},${spree_peak},${dominance_active},${dominance_cooldown}" > "$STREAK_FILE"
+    echo "${streak_peak},${spree_count},${dominance_active}" > "$STREAK_FILE"
 
-    # ── 6. Rank advancement ────────────────────────────────────────────────────
-    # Fires when a new Apex crosses into a new rank tier
-    if (( catches > pb )); then
-        local new_rank old_rank
-        new_rank=$(get_rank "$catches")
-        old_rank=$(get_rank "$pb")
-        # Strip colour codes for comparison
-        local new_rank_plain old_rank_plain
-        new_rank_plain=$(echo -e "$new_rank" | sed 's/\x1b\[[0-9;]*m//g')
-        old_rank_plain=$(echo -e "$old_rank" | sed 's/\x1b\[[0-9;]*m//g')
-        if [[ "$new_rank_plain" != "$old_rank_plain" ]]; then
-            print_milestone "⚔️  Title claimed: ${new_rank}"
+    # ── Echo ──────────────────────────────────────────────────────────────────
+    # Fires once when the current Apex has been matched exactly 3 times.
+    # Keyed to pb value so it re-arms if the Apex is ever broken.
+    if (( catches == pb && pb > 0 )); then
+        local ec
+        ec=$(echo_count "$pb")
+        if (( ec >= 3 )) && ! milestone_fired "echo" "$pb"; then
+            record_milestone "echo" "$pb"
+            print_milestone "${MAGENTA}The Echo stirs. The Apex has been matched ${ec} times.${RESET}"
             any=1
         fi
     fi
@@ -640,7 +472,7 @@ check_milestones() {
     fi
 }
 
-# ── Show leaderboard ───────────────────────────────────────────────────────────
+# ── Show Annals ────────────────────────────────────────────────────────────────
 
 show_scores() {
     local limit=$1
@@ -651,7 +483,7 @@ show_scores() {
     local total
     total=$(total_sessions)
 
-    echo -e "  ${BOLD}${YELLOW}🏆  JUGGLING HIGH SCORES${RESET}  ${DIM}(3-ball)${RESET}"
+    echo -e "  ${BOLD}${YELLOW}TRIUMPHS${RESET}  ${DIM}(3-ball)${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
 
     if (( total == 0 )); then
@@ -745,6 +577,269 @@ calc_streaks() {
     }' "$DATA_FILE"
 }
 
+# ── Trend ──────────────────────────────────────────────────────────────────────
+
+show_trend() {
+    local total
+    total=$(total_sessions)
+    if (( total == 0 )); then
+        echo -e "\n  No trials logged yet.\n"
+        return
+    fi
+
+    local today dow week_start
+    today=$(date +%Y-%m-%d)
+    dow=$(date +%u)
+    week_start=$(date -d "$today -$(( dow - 1 )) days" +%Y-%m-%d)
+
+    # ── Week-over-week ─────────────────────────────────────────────────────────
+    local last_week_start last_week_end
+    last_week_start=$(date -d "$week_start -7 days" +%Y-%m-%d)
+    last_week_end=$(date -d "$week_start -1 day" +%Y-%m-%d)
+
+    local this_week_avg last_week_avg
+    this_week_avg=$(awk -F',' -v ws="$week_start" '
+        $1 >= ws { s+=$3; n++ }
+        END { printf "%.1f", (n>0 ? s/n : 0) }
+    ' "$DATA_FILE")
+    last_week_avg=$(awk -F',' -v s="$last_week_start" -v e="$last_week_end" '
+        $1 >= s && $1 <= e { sum+=$3; n++ }
+        END { printf "%.1f", (n>0 ? sum/n : 0) }
+    ' "$DATA_FILE")
+
+    local week_diff week_sign
+    week_diff=$(awk "BEGIN {printf \"%.1f\", $this_week_avg - $last_week_avg}")
+    if awk "BEGIN {exit !($week_diff > 0)}"; then
+        week_sign="${GREEN}▲ +${week_diff}${RESET}"
+    elif awk "BEGIN {exit !($week_diff < 0)}"; then
+        week_sign="${RED}▼ ${week_diff}${RESET}"
+    else
+        week_sign="${DIM}= no change${RESET}"
+    fi
+
+    # ── Month-over-month ───────────────────────────────────────────────────────
+    local this_month last_month
+    this_month=$(date +%Y-%m)
+    last_month=$(date -d "$today -1 month" +%Y-%m)
+
+    local this_month_avg last_month_avg
+    this_month_avg=$(awk -F',' -v m="$this_month" '
+        $1 ~ m { s+=$3; n++ }
+        END { printf "%.1f", (n>0 ? s/n : 0) }
+    ' "$DATA_FILE")
+    last_month_avg=$(awk -F',' -v m="$last_month" '
+        $1 ~ m { s+=$3; n++ }
+        END { printf "%.1f", (n>0 ? s/n : 0) }
+    ' "$DATA_FILE")
+
+    local month_diff month_sign
+    month_diff=$(awk "BEGIN {printf \"%.1f\", $this_month_avg - $last_month_avg}")
+    if awk "BEGIN {exit !($month_diff > 0)}"; then
+        month_sign="${GREEN}▲ +${month_diff}${RESET}"
+    elif awk "BEGIN {exit !($month_diff < 0)}"; then
+        month_sign="${RED}▼ ${month_diff}${RESET}"
+    else
+        month_sign="${DIM}= no change${RESET}"
+    fi
+
+    # ── Recent trend (last 5 vs prev 5) ───────────────────────────────────────
+    local trend_line=""
+    if (( total >= 10 )); then
+        local prev5_avg last5_avg
+        read -r prev5_avg last5_avg <<< "$(tail -n10 "$DATA_FILE" | awk -F',' '
+            NR<=5 { s1+=$3; n1++ }
+            NR>5  { s2+=$3; n2++ }
+            END   { printf "%.1f %.1f", (n1>0?s1/n1:0), (n2>0?s2/n2:0) }
+        ')"
+        local diff
+        diff=$(awk "BEGIN {printf \"%.1f\", $last5_avg - $prev5_avg}")
+        local sign
+        if awk "BEGIN {exit !($diff > 0)}"; then
+            sign="${GREEN}▲ +${diff}${RESET}"
+        elif awk "BEGIN {exit !($diff < 0)}"; then
+            sign="${RED}▼ ${diff}${RESET}"
+        else
+            sign="${DIM}= no change${RESET}"
+        fi
+        trend_line="  ${BOLD}Last 10 trials :${RESET}  prev 5 avg ${prev5_avg}  →  last 5 avg ${last5_avg}  ${sign}"
+    fi
+
+    # ── Weekly sparkline (last 12 weeks) ──────────────────────────────────────
+    local sparks=()
+    local spark_avgs=()
+    local spark_min=999999 spark_max=0
+    for (( w=11; w>=0; w-- )); do
+        local ws we
+        ws=$(date -d "$week_start -$(( w * 7 )) days" +%Y-%m-%d)
+        we=$(date -d "$ws +6 days" +%Y-%m-%d)
+        local wavg
+        wavg=$(awk -F',' -v s="$ws" -v e="$we" '
+            $1 >= s && $1 <= e { sum+=$3; n++ }
+            END { printf "%.1f", (n>0 ? sum/n : 0) }
+        ' "$DATA_FILE")
+        spark_avgs+=("$wavg")
+        local wi
+        wi=$(awk "BEGIN {printf \"%d\", int($wavg)}")
+        if (( wi > 0 )); then
+            (( wi < spark_min )) && spark_min=$wi
+            (( wi > spark_max )) && spark_max=$wi
+        fi
+    done
+
+    local spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local sparkline=""
+    local has_data=0
+    for wavg in "${spark_avgs[@]}"; do
+        local wi
+        wi=$(awk "BEGIN {printf \"%d\", int($wavg)}")
+        if (( wi == 0 )); then
+            sparkline+="${DIM}·${RESET}"
+        else
+            has_data=1
+            local range=$(( spark_max - spark_min ))
+            local idx
+            if (( range == 0 )); then
+                idx=3
+            else
+                idx=$(( (wi - spark_min) * 7 / range ))
+            fi
+            sparkline+="${spark_chars[$idx]}"
+        fi
+    done
+
+    # ── Time-of-day breakdown ─────────────────────────────────────────────────
+    # One pass: band counts + per-hour counts
+    local tod_data
+    tod_data=$(awk -F',' '
+        {
+            split($2, t, ":"); h = t[1]+0
+            if      (h <= 5)  vigil++
+            else if (h <= 11) dawn++
+            else if (h <= 17) meridian++
+            else              dusk++
+            hour[h]++
+        }
+        END {
+            printf "%d %d %d %d", vigil+0, dawn+0, meridian+0, dusk+0
+            for (i=0; i<24; i++) printf " %d", hour[i]+0
+        }
+    ' "$DATA_FILE")
+
+    local tod_vigil tod_dawn tod_meridian tod_dusk
+    read -r tod_vigil tod_dawn tod_meridian tod_dusk \
+        h0  h1  h2  h3  h4  h5  h6  h7  h8  h9  h10 h11 \
+        h12 h13 h14 h15 h16 h17 h18 h19 h20 h21 h22 h23 <<< "$tod_data"
+
+    local tod_max=0
+    for band in "$tod_vigil" "$tod_dawn" "$tod_meridian" "$tod_dusk"; do
+        (( band > tod_max )) && tod_max=$band
+    done
+
+    # Build a bar of width 10 for each band
+    tod_bar() {
+        local count=$1 max=$2 width=10
+        local filled=0
+        (( max > 0 )) && filled=$(( count * width / max ))
+        local bar=""
+        for (( b=0; b<width; b++ )); do
+            if (( b < filled )); then bar+="█"; else bar+="░"; fi
+        done
+        local pct=0
+        (( total > 0 )) && pct=$(( count * 100 / total ))
+        printf "%s  %3d%%" "$bar" "$pct"
+    }
+
+    # Build 24-char hourly sparkline
+    local hour_vals=( "$h0"  "$h1"  "$h2"  "$h3"  "$h4"  "$h5"
+                      "$h6"  "$h7"  "$h8"  "$h9"  "$h10" "$h11"
+                      "$h12" "$h13" "$h14" "$h15" "$h16" "$h17"
+                      "$h18" "$h19" "$h20" "$h21" "$h22" "$h23" )
+    local hour_max=0
+    for hv in "${hour_vals[@]}"; do (( hv > hour_max )) && hour_max=$hv; done
+
+    local spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local hour_spark=""
+    for hv in "${hour_vals[@]}"; do
+        if (( hv == 0 )); then
+            hour_spark+="${DIM}·${RESET}"
+        else
+            local idx=0
+            (( hour_max > 0 )) && idx=$(( hv * 7 / hour_max ))
+            hour_spark+="${spark_chars[$idx]}"
+        fi
+    done
+
+    # ── Output ─────────────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}TREND${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}This week      :${RESET}  avg ${this_week_avg}  ${DIM}(last week: ${last_week_avg})${RESET}  ${week_sign}"
+    echo -e "  ${BOLD}This month     :${RESET}  avg ${this_month_avg}  ${DIM}(last month: ${last_month_avg})${RESET}  ${month_sign}"
+    if [[ -n "$trend_line" ]]; then
+        echo -e "$trend_line"
+    fi
+    if (( has_data )); then
+        echo ""
+        echo -e "  ${BOLD}Weekly avg${RESET}  ${DIM}(12 weeks)${RESET}"
+        echo -e "  ${sparkline}"
+        echo -e "  ${DIM}└ oldest                newest ┘${RESET}"
+    fi
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}WHEN YOU TRAIN${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    printf "  ${BOLD}%-10s${RESET}  %s\n" "Dawn"     "$(tod_bar "$tod_dawn"     "$tod_max")"
+    printf "  ${BOLD}%-10s${RESET}  %s\n" "Meridian" "$(tod_bar "$tod_meridian" "$tod_max")"
+    printf "  ${BOLD}%-10s${RESET}  %s\n" "Dusk"     "$(tod_bar "$tod_dusk"     "$tod_max")"
+    printf "  ${BOLD}%-10s${RESET}  %s\n" "Vigil"    "$(tod_bar "$tod_vigil"    "$tod_max")"
+    echo ""
+    echo -e "  ${BOLD}By hour${RESET}    ${hour_spark}"
+    echo -e "  ${DIM}           └ 00                  23 ┘${RESET}"
+    echo ""
+}
+
+# ── Apex Record ────────────────────────────────────────────────────────────────
+
+show_apex() {
+    local pb=${1:-$(personal_best)}
+
+    if [[ ! -s "$PB_FILE" ]]; then
+        echo -e "\n  No Apex set yet.\n"
+        return
+    fi
+
+    local pb_count
+    pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
+    local skip=$(( pb_count > 10 ? pb_count - 10 : 0 ))
+    local prev_val=0
+    local i=0
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}APEX RECORD${RESET}  ${DIM}(last 10)${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    while IFS=',' read -r ph_date ph_time ph_val; do
+        (( i++ ))
+        (( i <= skip )) && prev_val=$ph_val && continue
+        local diff_str=""
+        if (( prev_val == 0 )); then
+            diff_str="${DIM}start${RESET}"
+        else
+            local d=$(( ph_val - prev_val ))
+            diff_str="${GREEN}+${d}${RESET}"
+        fi
+        if (( ph_val == pb )); then
+            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${DIM}← current${RESET}\n" "$ph_date" "$ph_time" "$ph_val" "$diff_str"
+        else
+            printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b\n" "$ph_date" "$ph_time" "$ph_val" "$diff_str"
+        fi
+        prev_val=$ph_val
+    done < "$PB_FILE"
+    echo ""
+}
+
 # ── Stats ──────────────────────────────────────────────────────────────────────
 
 show_stats() {
@@ -827,25 +922,64 @@ show_stats() {
     local cur_streak best_streak
     read -r cur_streak best_streak <<< "$(calc_streaks)"
 
-    # Floor: 10th-percentile of last 20 sessions
-    local floor_val
-    floor_val=$(tail -n20 "$DATA_FILE" | awk -F',' '
-        {vals[NR]=$2}
+    # Floor (10th-percentile) and Ceiling (90th-percentile) of last 20 trials
+    local floor_val ceiling_val
+    read -r floor_val ceiling_val <<< "$(tail -n20 "$DATA_FILE" | awk -F',' '
+        {vals[NR]=$3}
         END {
             n=NR
             for(i=1;i<=n;i++) for(j=i+1;j<=n;j++) if(vals[j]<vals[i]) {t=vals[i];vals[i]=vals[j];vals[j]=t}
-            idx = int(n * 0.10) + 1
-            print vals[idx]
+            floor_idx = int(n * 0.10) + 1
+            ceil_idx  = int(n * 0.90); if (ceil_idx < 1) ceil_idx = 1
+            printf "%s %s", vals[floor_idx], vals[ceil_idx]
         }
+    ')"
+
+    # Steadfastness: % of trials >= 50% of pb
+    local consist_recent consist_alltime
+    consist_recent=$(tail -n20 "$DATA_FILE" | awk -F',' -v pb="$pb" '
+        { t++; if (pb > 0 && $3 * 100 / pb >= 50) g++ }
+        END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
     ')
+    consist_alltime=$(awk -F',' -v pb="$pb" '
+        { t++; if (pb > 0 && $3 * 100 / pb >= 50) g++ }
+        END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
+    ' "$DATA_FILE")
+
+    # Nemesis: most-repeated score strictly below the Apex (ties broken by higher score)
+    local nemesis_score=0 nemesis_count=0
+    read -r nemesis_score nemesis_count <<< "$(awk -F',' -v pb="$pb" '
+        $3 < pb { count[$3]++ }
+        END {
+            best_c = 0; best_s = 0
+            for (s in count) {
+                if (count[s] > best_c || (count[s] == best_c && s+0 > best_s+0)) {
+                    best_c = count[s]; best_s = s
+                }
+            }
+            printf "%d %d", best_s+0, best_c+0
+        }
+    ' "$DATA_FILE")"
+
+    # Next title threshold
+    local next_title_catches=0 next_title_name=""
+    local _thresholds=(5 10 15 20 25 30 40 50 75 100 125 150 175 200 250 300 400 500 750 1000)
+    local _names=("Apprentice" "Initiate" "Adept" "Keeper" "Knight" "Harbinger" "Conjuror" "Sage" "Phantom" "Sovereign" "Luminant" "Oracle" "Auric" "Specter" "Empyrean" "Revenant" "Colossus" "Legend" "Paragon" "Immortal")
+    for (( _i=0; _i<${#_thresholds[@]}; _i++ )); do
+        if (( pb < _thresholds[_i] )); then
+            next_title_catches=${_thresholds[_i]}
+            next_title_name="${_names[_i]}"
+            break
+        fi
+    done
 
     # Recent trend
     local trend_line=""
     if (( total >= 10 )); then
         local prev5_avg last5_avg
         read -r prev5_avg last5_avg <<< "$(tail -n10 "$DATA_FILE" | awk -F',' '
-            NR<=5  { s1+=$2; n1++ }
-            NR>5   { s2+=$2; n2++ }
+            NR<=5  { s1+=$3; n1++ }
+            NR>5   { s2+=$3; n2++ }
             END    { printf "%.1f %.1f", (n1>0?s1/n1:0), (n2>0?s2/n2:0) }
         ')"
         local diff
@@ -863,13 +997,18 @@ show_stats() {
 
     # ── Print main stats block ─────────────────────────────────────────────────
     echo ""
-    echo -e "  ${BOLD}${CYAN}📊  IVGVLATOR STATS${RESET}  ${DIM}(3-ball)${RESET}"
-    echo -e "  ${DIM}IVGVLATOR${RESET}"
+    echo -e "  ${BOLD}${CYAN}IVGVLATOR — THE RECKONING${RESET}  ${DIM}(3-ball)${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Apex          :${RESET}  ${YELLOW}${BOLD}${pb} catches${RESET}"
     local stats_rank
     stats_rank=$(get_rank "$pb")
     echo -e "  ${BOLD}Title         :${RESET}  ${stats_rank}"
+    if (( next_title_catches > 0 )); then
+        local _needed=$(( next_title_catches - pb ))
+        echo -e "  ${BOLD}Next title    :${RESET}  ${next_title_name}  ${DIM}(${_needed} more catches)${RESET}"
+    else
+        echo -e "  ${BOLD}Next title    :${RESET}  ${DIM}none — maximum title reached${RESET}"
+    fi
     local stats_grade_info stats_grade stats_grade_colour
     stats_grade_info=$(get_grade "$last_catches" "$pb")
     stats_grade="${stats_grade_info%%|*}"
@@ -889,45 +1028,103 @@ show_stats() {
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month}  ${DIM}(avg ${best_month_avg})${RESET}"
     echo -e "  ${BOLD}Trials/week   :${RESET}  ${sessions_per_week} avg  ${DIM}(this week: ${this_week_sessions})${RESET}"
     echo ""
-    echo -e "  ${BOLD}Current chain :${RESET}  ${cur_streak} consecutive day(s)"
     echo -e "  ${BOLD}Best chain    :${RESET}  ${best_streak} consecutive day(s)"
-    echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(rarely fall below this, last 20 trials)${RESET}"
+    echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(10th percentile, last 20 trials)${RESET}"
+    echo -e "  ${BOLD}Ceiling       :${RESET}  ${ceiling_val} catches  ${DIM}(90th percentile, last 20 trials)${RESET}"
+    echo -e "  ${BOLD}Steadfastness :${RESET}  ${consist_recent}%  ${DIM}(last 20)  /  ${consist_alltime}% all-time${RESET}"
+    if (( nemesis_count >= 2 )); then
+        echo -e "  ${BOLD}Nemesis       :${RESET}  ${RED}${nemesis_score} catches${RESET}  ${DIM}(${nemesis_count} times)${RESET}"
+    fi
     [[ -n "$trend_line" ]] && echo -e "$trend_line"
 
-    # ── Apex Record ────────────────────────────────────────────────────────────
-    if [[ -s "$PB_FILE" ]]; then
-        echo ""
-        echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-        echo -e "  ${BOLD}APEX RECORD${RESET}  ${DIM}(last 10)${RESET}"
-        echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-        local pb_count
-        pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
-        local skip=$(( pb_count > 10 ? pb_count - 10 : 0 ))
-        local prev_val=0
-        local i=0
-        while IFS=',' read -r ph_date ph_time ph_val; do
-            (( i++ ))
-            (( i <= skip )) && prev_val=$ph_val && continue
-            local diff_str=""
-            if (( prev_val == 0 )); then
-                diff_str="${DIM}start${RESET}"
-            else
-                local d=$(( ph_val - prev_val ))
-                diff_str="${GREEN}+${d}${RESET}"
-            fi
-            if (( ph_val == pb )); then
-                printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${DIM}← current${RESET}\n" "$ph_date" "$ph_time" "$ph_val" "$diff_str"
-            else
-                printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b\n" "$ph_date" "$ph_time" "$ph_val" "$diff_str"
-            fi
-            prev_val=$ph_val
-        done < "$PB_FILE"
+    # ── Auguries ───────────────────────────────────────────────────────────────
+    local aug_spree_count aug_dom_active
+    if [[ -s "$STREAK_FILE" ]]; then
+        local _sp _sc _da
+        IFS=',' read -r _sp _sc _da < "$STREAK_FILE"
+        aug_spree_count=${_sc:-0}
+        aug_dom_active=${_da:-0}
+    else
+        aug_spree_count=0
+        aug_dom_active=0
     fi
 
-    # ── Trial distribution ─────────────────────────────────────────────────────
+    local aug_echo_count
+    aug_echo_count=$(echo_count "$pb")
+
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}SESSION DISTRIBUTION${RESET}"
+    echo -e "  ${BOLD}AUGURIES${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local aug_any=0
+    if (( cur_streak >= 2 )); then
+        echo -e "  ${BOLD}Chain      :${RESET}  ${GREEN}${cur_streak} consecutive day(s)${RESET}"
+        aug_any=1
+    fi
+    if (( aug_spree_count >= 3 )); then
+        echo -e "  ${BOLD}Spree      :${RESET}  ${CYAN}${aug_spree_count} worthy trial(s)${RESET}"
+        aug_any=1
+    fi
+    if (( aug_dom_active )); then
+        echo -e "  ${BOLD}Dominance  :${RESET}  ${YELLOW}active${RESET}"
+        aug_any=1
+    fi
+    if (( aug_echo_count >= 3 )); then
+        echo -e "  ${BOLD}Echo       :${RESET}  ${MAGENTA}The Apex endures. Matched ${aug_echo_count} times.${RESET}"
+        aug_any=1
+    fi
+    if (( aug_any == 0 )); then
+        echo -e "  ${DIM}none${RESET}"
+    fi
+
+    # ── Titles ────────────────────────────────────────────────────────────────
+    local t_thresholds=(0 5 10 15 20 25 30 40 50 75 100 125 150 175 200 250 300 400 500 750 1000)
+    local t_names=("Neophyte" "Apprentice" "Initiate" "Adept" "Keeper" "Knight" "Harbinger" "Conjuror" "Sage" "Phantom" "Sovereign" "Luminant" "Oracle" "Auric" "Specter" "Empyrean" "Revenant" "Colossus" "Legend" "Paragon" "Immortal")
+    local t_colours=("" "" "" "" "${CYAN}" "${CYAN}" "${CYAN}" "${CYAN}" "${GREEN}" "${GREEN}" "${GREEN}" "${YELLOW}" "${YELLOW}" "${YELLOW}" "${YELLOW}" "${MAGENTA}" "${MAGENTA}" "${MAGENTA}" "${RED}" "${RED}" "${YELLOW}${BOLD}")
+
+    local current_idx=0
+    for (( i=0; i<${#t_thresholds[@]}; i++ )); do
+        (( pb >= t_thresholds[i] )) && current_idx=$i
+    done
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}TITLES${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+
+    local win_above=3 win_below=3
+    local window_start=$(( current_idx - win_above ))
+    (( window_start < 0 )) && window_start=0
+    local window_end=$(( current_idx + win_below ))
+    (( window_end >= ${#t_thresholds[@]} )) && window_end=$(( ${#t_thresholds[@]} - 1 ))
+
+    if (( window_start > 0 )); then
+        echo -e "  ${DIM}·  … and ${window_start} more${RESET}"
+    fi
+
+    local i
+    for (( i=window_start; i<=window_end; i++ )); do
+        if (( i == current_idx )); then
+            printf "  ${t_colours[i]}✔  %-15s  (%d+)${RESET}  ${DIM}← current${RESET}\n" "${t_names[i]}" "${t_thresholds[i]}"
+        elif (( i < current_idx )); then
+            printf "  ✔  %-15s  (%d+)\n" "${t_names[i]}" "${t_thresholds[i]}"
+        else
+            printf "  ${DIM}·  %-15s  (%d+)${RESET}\n" "${t_names[i]}" "${t_thresholds[i]}"
+        fi
+    done
+
+    local remaining=$(( ${#t_thresholds[@]} - 1 - window_end ))
+    if (( remaining > 0 )); then
+        echo -e "  ${DIM}·  … and ${remaining} more${RESET}"
+    fi
+
+    # ── Apex Record ────────────────────────────────────────────────────────────
+    show_apex "$pb"
+
+    # ── Trial Ledger ───────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}TRIAL LEDGER${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
 
     # Build bands up to highest score ever recorded (rounded up to next band)
@@ -990,7 +1187,7 @@ show_stats() {
     # ── Last 20 trials — vertical average line ────────────────────────────────
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}LAST 20 SESSIONS${RESET}  ${DIM}(${YELLOW}│${DIM} = all-time avg ${avg})${RESET}"
+    echo -e "  ${BOLD}LAST 20 TRIALS${RESET}  ${DIM}(${YELLOW}│${DIM} = all-time avg ${avg})${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
 
     local chart_width=24
@@ -1026,6 +1223,54 @@ show_stats() {
 
         printf "  ${DIM}%s${RESET}  ${CYAN}%s${RESET}  ${DIM}%2d${RESET}\n" "$date" "$line" "$val"
     done < <(tail -n20 "$DATA_FILE")
+    echo ""
+}
+
+# ── Today ──────────────────────────────────────────────────────────────────────
+
+show_today() {
+    local today
+    today=$(date +%Y-%m-%d)
+    local total
+    total=$(total_sessions)
+
+    if (( total == 0 )); then
+        echo -e "\n  No trials logged yet.\n"
+        return
+    fi
+
+    local today_count today_best today_sum
+    read -r today_count today_best today_sum <<< "$(awk -F',' -v d="$today" '
+        $1 == d { n++; s+=$3; if ($3 > best) best=$3 }
+        END { printf "%d %d %d", n+0, best+0, s+0 }
+    ' "$DATA_FILE")"
+
+    if (( today_count == 0 )); then
+        echo -e "\n  No trials today.\n"
+        return
+    fi
+
+    local today_avg
+    today_avg=$(awk "BEGIN {printf \"%.1f\", $today_sum / $today_count}")
+
+    local alltime_avg
+    alltime_avg=$(awk -F',' '{s+=$3; n++} END {printf "%.1f", (n>0?s/n:0)}' "$DATA_FILE")
+
+    local pb
+    pb=$(personal_best)
+
+    local grade_info grade grade_colour
+    grade_info=$(get_grade "$today_best" "$pb")
+    grade="${grade_info%%|*}"
+    grade_colour="${grade_info##*|}"
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}TODAY${RESET}  ${DIM}${today}${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}Trials today  :${RESET}  ${today_count}"
+    echo -e "  ${BOLD}Best today    :${RESET}  ${BOLD}${today_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Today's avg   :${RESET}  ${today_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}"
     echo ""
 }
 
@@ -1072,6 +1317,38 @@ undo_last() {
                 head -n -1 "$PB_FILE" > "$tmp" && mv "$tmp" "$PB_FILE"
             fi
         fi
+        # Recompute augury state from post-undo data
+        local new_pb
+        new_pb=$(personal_best)
+        local new_spree=0
+        if [[ -s "$DATA_FILE" ]] && (( new_pb > 0 )); then
+            while IFS=',' read -r _ _ c; do
+                if (( c * 100 / new_pb >= 50 )); then
+                    (( new_spree++ ))
+                else
+                    break
+                fi
+            done < <(tac "$DATA_FILE")
+        fi
+        local new_dom=0
+        local new_total
+        new_total=$(total_sessions)
+        if (( new_pb > 0 && new_total >= 10 )); then
+            local dom_count
+            dom_count=$(tail -n10 "$DATA_FILE" | awk -F',' -v pb="$new_pb" '
+                { if ($3 * 100 / pb >= 80) count++ }
+                END { print count+0 }
+            ')
+            (( dom_count >= 5 )) && new_dom=1
+        fi
+        local new_cur_streak new_streak_peak=0
+        read -r new_cur_streak _ <<< "$(calc_streaks)"
+        local st
+        for st in 3 7 14 30 60 90 180 365 730; do
+            (( new_cur_streak >= st )) && new_streak_peak=$st
+        done
+        echo "${new_streak_peak},${new_spree},${new_dom}" > "$STREAK_FILE"
+
         echo -e "  ${GREEN}Entry removed.${RESET}"
     else
         echo -e "  ${DIM}Cancelled — nothing changed.${RESET}"
@@ -1079,21 +1356,6 @@ undo_last() {
     echo ""
 }
 
-# ── Easter egg ─────────────────────────────────────────────────────────────────
-
-juggle_balls() {
-    local variations=(
-        "juGGlINg JugglinG JUGgling bALls"
-        "JUGgling juGGLinG jugGLING BaLLs"
-        "jUgGliNg JUGGling JugGLing BaLlS"
-        "JuGgLiNg jUgGlInG JUGGLING bAlLs"
-        "jugGLING JUgglING juGGLing BAllS"
-    )
-    local idx=$(( RANDOM % ${#variations[@]} ))
-    echo ""
-    echo -e "  ${GREEN}${variations[$idx]}${RESET}"
-    echo ""
-}
 
 # ── Usage ──────────────────────────────────────────────────────────────────────
 
@@ -1103,10 +1365,13 @@ usage() {
     echo ""
     echo -e "  ${BOLD}Usage:${RESET}"
     echo -e "    juggle ${CYAN}<number>${RESET}        Log a trial  ${DIM}(e.g. juggle 20)${RESET}"
-    echo -e "    juggle scores          Show top 10 high scores"
-    echo -e "    juggle scores ${CYAN}<N>${RESET}      Show top N high scores"
-    echo -e "    juggle scores ${CYAN}all${RESET}      Full record  ${DIM}(chronological)${RESET}"
-    echo -e "    juggle stats           Stats, Apex record, distribution & charts"
+    echo -e "    juggle top             Show top 10 Triumphs"
+    echo -e "    juggle top ${CYAN}<N>${RESET}         Show top N Triumphs"
+    echo -e "    juggle top ${CYAN}all${RESET}         Full record  ${DIM}(chronological)${RESET}"
+    echo -e "    juggle stats           The Reckoning: Apex, Auguries, Titles & charts"
+    echo -e "    juggle pb              Apex record table in isolation"
+    echo -e "    juggle trend           Week/month comparisons & 12-week sparkline"
+    echo -e "    juggle today           Trials today, best & average vs all-time"
     echo -e "    juggle last            Show most recent entry"
     echo -e "    juggle undo            Remove most recent entry"
     echo -e "    juggle --help          Show this help"
@@ -1128,7 +1393,7 @@ case "$1" in
     ''|--help|-h)
         usage
         ;;
-    scores)
+    top)
         if [[ -z "$2" ]]; then
             show_scores 10
         elif [[ "$2" == "all" ]]; then
@@ -1136,21 +1401,27 @@ case "$1" in
         elif [[ "$2" =~ ^[0-9]+$ ]]; then
             show_scores "$2"
         else
-            echo -e "\n  ${RED}Unknown argument:${RESET} juggle scores ${2}\n"
+            echo -e "\n  ${RED}Unknown argument:${RESET} juggle top ${2}\n"
             usage
         fi
         ;;
     stats)
         show_stats
         ;;
+    pb)
+        show_apex
+        ;;
+    trend)
+        show_trend
+        ;;
+    today)
+        show_today
+        ;;
     last)
         show_last
         ;;
     undo)
         undo_last
-        ;;
-    balls)
-        juggle_balls
         ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]]; then
