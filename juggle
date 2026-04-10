@@ -757,6 +757,36 @@ show_trend() {
         fi
     done
 
+    # ── Day-of-week breakdown ─────────────────────────────────────────────────
+    local dow_data
+    dow_data=$(awk -F',' '
+        {
+            split($1, dt, "-")
+            t = mktime(dt[1] " " dt[2] " " dt[3] " 12 0 0")
+            dow = strftime("%u", t) + 0
+            sum[dow] += $3
+            count[dow]++
+        }
+        END {
+            for (d = 1; d <= 7; d++)
+                printf "%d %d ", sum[d]+0, count[d]+0
+        }
+    ' "$DATA_FILE")
+
+    local dow_avgs=() dow_counts=()
+    read -r -a _dow_vals <<< "$dow_data"
+    local dow_max_avg=0
+    for (( _d=0; _d<7; _d++ )); do
+        local _ds=${_dow_vals[$(( _d*2 ))]} _dc=${_dow_vals[$(( _d*2+1 ))]}
+        dow_counts+=("$_dc")
+        local _da=0
+        (( _dc > 0 )) && _da=$(awk "BEGIN {printf \"%.1f\", $_ds/$_dc}")
+        dow_avgs+=("$_da")
+        local _dai
+        _dai=$(awk "BEGIN {printf \"%d\", int($_da)}")
+        (( _dai > dow_max_avg )) && dow_max_avg=$_dai
+    done
+
     # ── Output ─────────────────────────────────────────────────────────────────
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -773,6 +803,27 @@ show_trend() {
         echo -e "  ${sparkline}"
         echo -e "  ${DIM}└ oldest                newest ┘${RESET}"
     fi
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}DAY OF WEEK${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local _dow_names=("Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun")
+    for (( _d=0; _d<7; _d++ )); do
+        local _da=${dow_avgs[$_d]} _dc=${dow_counts[$_d]}
+        local _bar="" _dai _filled=0
+        _dai=$(awk "BEGIN {printf \"%d\", int($_da)}")
+        (( dow_max_avg > 0 )) && _filled=$(( _dai * 10 / dow_max_avg ))
+        for (( _b=0; _b<10; _b++ )); do
+            if (( _b < _filled )); then _bar+="█"; else _bar+="░"; fi
+        done
+        if (( _dc == 0 )); then
+            printf "  ${BOLD}%-4s${RESET}  ${DIM}░░░░░░░░░░  no data${RESET}\n" "${_dow_names[$_d]}"
+        else
+            printf "  ${BOLD}%-4s${RESET}  %s  %4.1f avg  ${DIM}(%d)${RESET}\n" \
+                "${_dow_names[$_d]}" "$_bar" "$_da" "$_dc"
+        fi
+    done
 
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
