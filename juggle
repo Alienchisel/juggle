@@ -354,18 +354,6 @@ check_milestones() {
     local pb=$4
     local any=0
 
-    # ── Birthday ───────────────────────────────────────────────────────────────
-    local month_day
-    month_day=$(date +%m-%d)
-    local birth_year
-    birth_year=$(date +%Y)
-    local bkey="birthday_${birth_year}"
-    if [[ "$month_day" == "09-15" ]] && ! milestone_fired "birthday" "$bkey"; then
-        record_milestone "birthday" "$bkey"
-        print_milestone "${YELLOW}${BOLD}Happy Birthday! Now stop reading this and go juggle some cake.${RESET}"
-        any=1
-    fi
-
     # ── 1. Catch-count thresholds ──────────────────────────────────────────────
     local catch_thresholds=(5 10 15 20 25 30 40 50 75 100 150 200 250 300 400 500 750 1000)
 
