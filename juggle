@@ -12,6 +12,8 @@
 #   juggle pb             Apex record table in isolation
 #   juggle trend          Week/month comparisons & 12-week sparkline
 #   juggle today          Daily summary: trials, best, avg vs all-time
+#   juggle month [YYYY-MM] Monthly recap (default: current month)
+#   juggle year  [YYYY]    Yearly recap (default: current year)
 #   juggle last           Show the most recent entry
 #   juggle undo           Remove the most recent entry (with confirmation)
 #   juggle --help         Show usage help
@@ -471,6 +473,24 @@ show_scores() {
     local total
     total=$(total_sessions)
 
+    local pb
+    pb=$(personal_best)
+
+    # Sets _g (grade letter) and _gc (grade colour) without a subshell
+    _grd() {
+        local _c=$1 _pct=0
+        (( pb > 0 )) && _pct=$(( _c * 100 / pb ))
+        if   (( _pct >= 100 )); then _g="SSS"; _gc="${YELLOW}${BOLD}"
+        elif (( _pct >= 90  )); then _g="SS";  _gc="${YELLOW}"
+        elif (( _pct >= 80  )); then _g="S";   _gc="${GREEN}"
+        elif (( _pct >= 65  )); then _g="A";   _gc="${CYAN}"
+        elif (( _pct >= 50  )); then _g="B";   _gc="${CYAN}"
+        elif (( _pct >= 35  )); then _g="C";   _gc="${RED}"
+        elif (( _pct >= 20  )); then _g="D";   _gc="${RED}"
+        else                         _g="F";   _gc="${DIM}"
+        fi
+    }
+
     echo -e "  ${BOLD}${YELLOW}TRIUMPHS${RESET}  ${DIM}(3-ball)${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
 
@@ -486,18 +506,24 @@ show_scores() {
         echo -e "  ${DIM}──────────────────────────────────────${RESET}"
         local i=1
         while IFS=',' read -r date time catches; do
-            printf "  ${DIM}%4d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}\n" "$i" "$catches" "$date"
+            _grd "$catches"
+            printf "  ${DIM}%4d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${_gc}%-3s${RESET}\n" \
+                "$i" "$catches" "$date" "$_g"
             (( i++ ))
         done < "$DATA_FILE"
     else
         local i=1
         while IFS=',' read -r date time catches; do
+            _grd "$catches"
             if (( i == 1 )); then
-                printf "  ${YELLOW}${BOLD}%3d.  %3d catches   %s${RESET}\n" "$i" "$catches" "$date"
+                printf "  ${YELLOW}${BOLD}%3d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
+                    "$i" "$catches" "$date" "$_g"
             elif (( i <= 3 )); then
-                printf "  ${CYAN}${BOLD}%3d.  %3d catches   %s${RESET}\n" "$i" "$catches" "$date"
+                printf "  ${CYAN}${BOLD}%3d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
+                    "$i" "$catches" "$date" "$_g"
             else
-                printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}\n" "$i" "$catches" "$date"
+                printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${_gc}%-3s${RESET}\n" \
+                    "$i" "$catches" "$date" "$_g"
             fi
             (( i++ ))
             if [[ "$limit" != "all" ]] && (( i > limit )); then
@@ -869,10 +895,16 @@ show_apex() {
             local d=$(( ph_val - prev_val ))
             diff_str="${GREEN}+${d}${RESET}"
         fi
+        local grade_info grade grade_colour
+        grade_info=$(get_grade "$ph_val" "$pb")
+        grade="${grade_info%%|*}"
+        grade_colour="${grade_info##*|}"
         if (( ph_val == pb )); then
-            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${DIM}← current${RESET}\n" "$ph_date" "$ph_time" "$ph_val" "$diff_str"
+            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}\n" \
+                "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
         else
-            printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b\n" "$ph_date" "$ph_time" "$ph_val" "$diff_str"
+            printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}\n" \
+                "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
         fi
         prev_val=$ph_val
     done < "$PB_FILE"
@@ -1333,6 +1365,198 @@ show_today() {
     echo ""
 }
 
+# ── Month recap ────────────────────────────────────────────────────────────────
+
+show_month() {
+    local total
+    total=$(total_sessions)
+    if (( total == 0 )); then
+        echo -e "\n  No trials logged yet.\n"
+        return
+    fi
+
+    local target_month
+    if [[ -n "$1" ]]; then
+        if [[ "$1" =~ ^[0-9]{4}-[0-9]{2}$ ]]; then
+            target_month="$1"
+        else
+            echo -e "\n  ${RED}Invalid month format:${RESET} '$1'  ${DIM}(use YYYY-MM)${RESET}\n"
+            return 1
+        fi
+    else
+        target_month=$(date +%Y-%m)
+    fi
+
+    local m_count m_best m_sum
+    read -r m_count m_best m_sum <<< "$(awk -F',' -v m="$target_month" '
+        substr($1,1,7) == m { n++; s+=$3; if ($3 > best) best=$3 }
+        END { printf "%d %d %d", n+0, best+0, s+0 }
+    ' "$DATA_FILE")"
+
+    if (( m_count == 0 )); then
+        echo -e "\n  No trials in ${target_month}.\n"
+        return
+    fi
+
+    local m_avg
+    m_avg=$(awk "BEGIN {printf \"%.1f\", $m_sum / $m_count}")
+
+    local alltime_avg
+    alltime_avg=$(awk -F',' '{s+=$3; n++} END {printf "%.1f", (n>0?s/n:0)}' "$DATA_FILE")
+
+    local active_days days_in_month
+    active_days=$(awk -F',' -v m="$target_month" '
+        substr($1,1,7)==m {days[$1]=1}
+        END {print length(days)+0}
+    ' "$DATA_FILE")
+    days_in_month=$(date -d "${target_month}-01 +1 month -1 day" +%d)
+
+    local prev_month
+    prev_month=$(date -d "${target_month}-01 -1 month" +%Y-%m)
+    local prev_count prev_avg
+    read -r prev_count prev_avg <<< "$(awk -F',' -v m="$prev_month" '
+        substr($1,1,7)==m {s+=$3; n++}
+        END { printf "%d %.1f", n+0, (n>0?s/n:0) }
+    ' "$DATA_FILE")"
+
+    local month_sign=""
+    if (( prev_count > 0 )); then
+        local diff
+        diff=$(awk "BEGIN {printf \"%.1f\", $m_avg - $prev_avg}")
+        if awk "BEGIN {exit !($diff > 0)}"; then
+            month_sign="  ${GREEN}▲ +${diff} vs ${prev_month}${RESET}"
+        elif awk "BEGIN {exit !($diff < 0)}"; then
+            month_sign="  ${RED}▼ ${diff} vs ${prev_month}${RESET}"
+        else
+            month_sign="  ${DIM}= no change vs ${prev_month}${RESET}"
+        fi
+    fi
+
+    local pb
+    pb=$(personal_best)
+    local grade_info grade grade_colour
+    grade_info=$(get_grade "$m_best" "$pb")
+    grade="${grade_info%%|*}"
+    grade_colour="${grade_info##*|}"
+
+    local month_label
+    month_label=$(date -d "${target_month}-01" "+%B %Y")
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}MONTH${RESET}  ${DIM}${month_label}${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}Trials        :${RESET}  ${m_count}"
+    echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of ${days_in_month}"
+    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${m_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Avg           :${RESET}  ${m_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${month_sign}"
+    echo ""
+}
+
+# ── Year recap ──────────────────────────────────────────────────────────────────
+
+show_year() {
+    local total
+    total=$(total_sessions)
+    if (( total == 0 )); then
+        echo -e "\n  No trials logged yet.\n"
+        return
+    fi
+
+    local target_year
+    if [[ -n "$1" ]]; then
+        if [[ "$1" =~ ^[0-9]{4}$ ]]; then
+            target_year="$1"
+        else
+            echo -e "\n  ${RED}Invalid year format:${RESET} '$1'  ${DIM}(use YYYY)${RESET}\n"
+            return 1
+        fi
+    else
+        target_year=$(date +%Y)
+    fi
+
+    local y_count y_best y_sum
+    read -r y_count y_best y_sum <<< "$(awk -F',' -v y="$target_year" '
+        substr($1,1,4) == y { n++; s+=$3; if ($3 > best) best=$3 }
+        END { printf "%d %d %d", n+0, best+0, s+0 }
+    ' "$DATA_FILE")"
+
+    if (( y_count == 0 )); then
+        echo -e "\n  No trials in ${target_year}.\n"
+        return
+    fi
+
+    local y_avg
+    y_avg=$(awk "BEGIN {printf \"%.1f\", $y_sum / $y_count}")
+
+    local alltime_avg
+    alltime_avg=$(awk -F',' '{s+=$3; n++} END {printf "%.1f", (n>0?s/n:0)}' "$DATA_FILE")
+
+    local active_days
+    active_days=$(awk -F',' -v y="$target_year" '
+        substr($1,1,4)==y {days[$1]=1}
+        END {print length(days)+0}
+    ' "$DATA_FILE")
+
+    local prev_year
+    prev_year=$(( target_year - 1 ))
+    local prev_count prev_avg
+    read -r prev_count prev_avg <<< "$(awk -F',' -v y="$prev_year" '
+        substr($1,1,4)==y {s+=$3; n++}
+        END { printf "%d %.1f", n+0, (n>0?s/n:0) }
+    ' "$DATA_FILE")"
+
+    local year_sign=""
+    if (( prev_count > 0 )); then
+        local diff
+        diff=$(awk "BEGIN {printf \"%.1f\", $y_avg - $prev_avg}")
+        if awk "BEGIN {exit !($diff > 0)}"; then
+            year_sign="  ${GREEN}▲ +${diff} vs ${prev_year}${RESET}"
+        elif awk "BEGIN {exit !($diff < 0)}"; then
+            year_sign="  ${RED}▼ ${diff} vs ${prev_year}${RESET}"
+        else
+            year_sign="  ${DIM}= no change vs ${prev_year}${RESET}"
+        fi
+    fi
+
+    local best_month_key best_month_avg
+    read -r best_month_key best_month_avg <<< "$(awk -F',' -v y="$target_year" '
+        substr($1,1,4) == y {
+            key = substr($1,1,7)
+            sum[key] += $3
+            count[key]++
+        }
+        END {
+            best_avg = 0; best_key = ""
+            for (k in sum) {
+                a = sum[k] / count[k]
+                if (a > best_avg) { best_avg = a; best_key = k }
+            }
+            printf "%s %.1f", best_key, best_avg
+        }
+    ' "$DATA_FILE")"
+    local best_month_label
+    best_month_label=$(date -d "${best_month_key}-01" "+%B")
+
+    local pb
+    pb=$(personal_best)
+    local grade_info grade grade_colour
+    grade_info=$(get_grade "$y_best" "$pb")
+    grade="${grade_info%%|*}"
+    grade_colour="${grade_info##*|}"
+
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}YEAR${RESET}  ${DIM}${target_year}${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}Trials        :${RESET}  ${y_count}"
+    echo -e "  ${BOLD}Active days   :${RESET}  ${active_days}"
+    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${y_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Avg           :${RESET}  ${y_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${year_sign}"
+    echo -e "  ${BOLD}Best month    :${RESET}  ${best_month_label}  ${DIM}(avg ${best_month_avg})${RESET}"
+    echo ""
+}
+
 # ── Last entry ─────────────────────────────────────────────────────────────────
 
 show_last() {
@@ -1431,6 +1655,8 @@ usage() {
     echo -e "    juggle pb              Apex record table in isolation"
     echo -e "    juggle trend           Week/month comparisons & 12-week sparkline"
     echo -e "    juggle today           Trials today, best & average vs all-time"
+    echo -e "    juggle month [YYYY-MM] This month (or specific month) recap"
+    echo -e "    juggle year  [YYYY]    This year (or specific year) recap"
     echo -e "    juggle last            Show most recent entry"
     echo -e "    juggle undo            Remove most recent entry"
     echo -e "    juggle --help          Show this help"
@@ -1475,6 +1701,12 @@ case "$1" in
         ;;
     today)
         show_today
+        ;;
+    month)
+        show_month "$2"
+        ;;
+    year)
+        show_year "$2"
         ;;
     last)
         show_last
