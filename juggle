@@ -44,6 +44,7 @@ WITNESS_FILE="$DATA_DIR/witness_count"    # number of times The Witness has spok
 NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
 TITLE_STATE_FILE="$DATA_DIR/title_state"       # 1 if previous trial crossed a title threshold
 DOMINANCE_STREAK_FILE="$DATA_DIR/dominance_streak" # consecutive trials Dominance has been active
+AVG_TREND_FILE="$DATA_DIR/avg_trend"               # rolling avg x10 and up-streak count
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -68,6 +69,7 @@ init_data() {
     [[ ! -f "$NEMESIS_FILE" ]] && echo "0,0" > "$NEMESIS_FILE"
     [[ ! -f "$TITLE_STATE_FILE" ]] && echo "0" > "$TITLE_STATE_FILE"
     [[ ! -f "$DOMINANCE_STREAK_FILE" ]] && echo "0" > "$DOMINANCE_STREAK_FILE"
+    [[ ! -f "$AVG_TREND_FILE" ]] && echo "0,0" > "$AVG_TREND_FILE"
 
     # Migrate scores.csv from date,catches → date,time,catches
     local score_fields
@@ -614,6 +616,49 @@ log_score() {
         local _aug_line
         _aug_line=$(printf '%s  ·  ' "${_aug_parts[@]}")
         echo -e "  ${DIM}${_aug_line%  ·  }${RESET}"
+        echo ""
+    fi
+
+    # ── Trajectory ────────────────────────────────────────────────────────────
+    local _traj_line=""
+
+    # Signal 1: rolling average direction (x10 integer to avoid float comparison)
+    local _prev_avg_x10=0 _up_streak=0
+    [[ -f "$AVG_TREND_FILE" ]] && IFS=',' read -r _prev_avg_x10 _up_streak < "$AVG_TREND_FILE"
+    _prev_avg_x10=${_prev_avg_x10:-0}
+    _up_streak=${_up_streak:-0}
+    local _cur_avg_x10
+    _cur_avg_x10=$(tail -20 "$DATA_FILE" | awk -F',' \
+        '{s+=$3; n++} END{print (n>=20 ? int(s/n*10) : -1)}')
+    if (( _cur_avg_x10 >= 0 )); then
+        if (( _cur_avg_x10 > _prev_avg_x10 )); then
+            (( _up_streak++ ))
+        elif (( _cur_avg_x10 < _prev_avg_x10 )); then
+            _up_streak=0
+        fi
+        echo "${_cur_avg_x10},${_up_streak}" > "$AVG_TREND_FILE"
+        if (( _up_streak >= 3 )); then
+            _traj_line="Rolling average rising — ${_up_streak} consecutive checks."
+        fi
+    fi
+
+    # Signal 2: recent high (only if no Signal 1 and not a new Apex)
+    if [[ -z "$_traj_line" ]] && (( catches <= pb )); then
+        for _w in 30 14 7; do
+            local _w_date
+            _w_date=$(date -d "$today -${_w} days" +%Y-%m-%d)
+            local _w_count _w_max
+            read -r _w_count _w_max <<< "$(head -n -1 "$DATA_FILE" | awk -F',' \
+                -v d="$_w_date" '{if($1>=d){if($3+0>max)max=$3+0; n++}} END{print n+0, max+0}')"
+            if (( _w_count >= 5 && catches > _w_max )); then
+                _traj_line="Highest score in ${_w} days."
+                break
+            fi
+        done
+    fi
+
+    if [[ -n "$_traj_line" ]]; then
+        echo -e "  ${DIM}${_traj_line}${RESET}"
         echo ""
     fi
 
