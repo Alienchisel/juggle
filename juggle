@@ -946,6 +946,14 @@ check_codex() {
         fi
     fi
 
+    # The Ratio — score contains "314"
+    if ! codex_discovered "RATIO" && [[ "$catches" == *"314"* ]]; then
+        record_codex "RATIO" "$today"
+        print_codex_discovery "The Ratio" \
+            "The ancient proportion, written in the record."
+        any=1
+    fi
+
     # The Gathering Form — 10 catches in a single trial
     if ! codex_discovered "GATHERING_FORM" && (( catches >= 10 )); then
         record_codex "GATHERING_FORM" "$today"
@@ -1041,7 +1049,7 @@ show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION
-                 CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE
+                 CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
                  BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD
@@ -1049,7 +1057,7 @@ show_codex() {
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection"
-                  "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve"
+                  "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
                   "The Breaking of Limits" "The High Current" "The Thousandfold Trial"
@@ -1075,6 +1083,7 @@ show_codex() {
                   "The score read the same from both ends."
                   "The reflection held at depth."
                   "Every prime beneath one hundred, once recorded."
+                  "The ancient proportion, written in the record."
                   "Ten catches in a single trial."
                   "Twenty-five catches in a single trial."
                   "Fifty catches in a single trial."
