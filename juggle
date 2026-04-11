@@ -50,6 +50,7 @@ CYAN='\033[0;36m'
 MAGENTA='\033[1;35m'
 BOLD='\033[1m'
 DIM='\033[2m'
+ITALIC='\033[3m'
 RESET='\033[0m'
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -360,8 +361,8 @@ witness_speak() {
     if (( roll < threshold && ${#lines[@]} > 0 )); then
         local idx=$(( RANDOM % ${#lines[@]} ))
         echo ""
-        echo -e "  ${DIM}${lines[$idx]}${RESET}"
-        echo -e "  ${DIM}— The Witness${RESET}"
+        echo -e "  ${DIM}${ITALIC}${lines[$idx]}${RESET}"
+        echo -e "  ${DIM}${ITALIC}— The Witness${RESET}"
         echo ""
     fi
 }
