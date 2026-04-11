@@ -18,6 +18,7 @@
 #   juggle last           Show the most recent entry
 #   juggle undo           Remove the most recent entry (with confirmation)
 #   juggle lore           Explain all systems (Omens, Auguries, Grades, Titles, etc.)
+#   juggle codex          The Codex: permanent discoveries & achievements
 #   juggle --help         Show usage help
 #
 # Data files (default: alongside this script in ./juggle-data/; override with $JUGGLE_DATA_DIR):
@@ -25,6 +26,7 @@
 #   milestones.csv        Omen log (fired omens): type,key
 #   pb_history.csv        Apex record: date,time,catches
 #   streak_state.csv      Chain peak, spree count, dominance state
+#   codex.csv             Persistent discovery log: key,date
 
 SCRIPT_PATH="${BASH_SOURCE[0]}"
 if command -v readlink >/dev/null 2>&1; then
@@ -37,6 +39,7 @@ DATA_FILE="$DATA_DIR/scores.csv"
 MILESTONE_FILE="$DATA_DIR/milestones.csv"
 PB_FILE="$DATA_DIR/pb_history.csv"
 STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_active
+CODEX_FILE="$DATA_DIR/codex.csv"          # persistent discoveries: key,date
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -100,6 +103,9 @@ init_data() {
         IFS=',' read -r f1 _ f3 _ f5 _ < "$STREAK_FILE"
         echo "${f1:-0},${f3:-0},${f5:-0}" > "$STREAK_FILE"
     fi
+
+    # codex.csv: persistent discovery log (key,date)
+    [[ ! -f "$CODEX_FILE" ]] && touch "$CODEX_FILE"
 }
 
 all_scores_sorted() {
@@ -137,6 +143,22 @@ record_milestone() {
 
 print_milestone() {
     echo -e "  ${1}"
+}
+
+codex_discovered() {
+    local key=$1
+    grep -qF "${key}," "$CODEX_FILE" 2>/dev/null
+}
+
+record_codex() {
+    local key=$1 date=$2
+    echo "${key},${date}" >> "$CODEX_FILE"
+}
+
+print_codex_discovery() {
+    local name=$1 desc=$2
+    echo -e "  ${YELLOW}${BOLD}✦ Codex Unlocked:${RESET} ${BOLD}${name}${RESET}"
+    echo -e "  ${DIM}${desc}${RESET}"
 }
 
 # ── Apex tracking ──────────────────────────────────────────────────────────────
@@ -333,6 +355,7 @@ log_score() {
     echo ""
 
     check_milestones "$catches" "$total" "$today" "$pb"
+    check_codex      "$catches" "$total" "$today" "$pb"
 
     print_grade "$catches" "$display_pb"
 
@@ -461,6 +484,93 @@ check_milestones() {
     if (( any )); then
         echo ""
     fi
+}
+
+# ── Codex ──────────────────────────────────────────────────────────────────────
+
+check_codex() {
+    local catches=$1 total=$2 today=$3 pb=$4
+    local any=0
+
+    # The Faithful — 100 total trials
+    if ! codex_discovered "FAITHFUL" && (( total >= 100 )); then
+        record_codex "FAITHFUL" "$today"
+        print_codex_discovery "The Faithful" "One hundred trials recorded."
+        any=1
+    fi
+
+    # The Ascent — 5+ Apex records
+    local apex_count
+    apex_count=$(wc -l < "$PB_FILE" 2>/dev/null || echo 0)
+    apex_count="${apex_count// /}"
+    if ! codex_discovered "ASCENT" && (( apex_count >= 5 )); then
+        record_codex "ASCENT" "$today"
+        print_codex_discovery "The Ascent" "Five Apex records set."
+        any=1
+    fi
+
+    # The Golden Span — 150 catches in a single trial
+    if ! codex_discovered "GOLDEN_SPAN" && (( catches >= 150 )); then
+        record_codex "GOLDEN_SPAN" "$today"
+        print_codex_discovery "The Golden Span" \
+            "One hundred and fifty catches in a single trial."
+        any=1
+    fi
+
+    # The Still Hand — same score 3+ times
+    local rep_count
+    rep_count=$(awk -F',' -v c="$catches" '$3==c{n++} END{print n+0}' "$DATA_FILE")
+    if ! codex_discovered "STILL_HAND" && (( rep_count >= 3 )); then
+        record_codex "STILL_HAND" "$today"
+        print_codex_discovery "The Still Hand" \
+            "The same score recorded three or more times."
+        any=1
+    fi
+
+    # The Echo Chamber — Apex matched 3+ times
+    if ! codex_discovered "ECHO_CHAMBER" && (( catches == pb && pb > 0 )); then
+        local ec
+        ec=$(echo_count "$pb")
+        if (( ec >= 3 )); then
+            record_codex "ECHO_CHAMBER" "$today"
+            print_codex_discovery "The Echo Chamber" \
+                "Your Apex matched three or more times."
+            any=1
+        fi
+    fi
+
+    (( any )) && echo ""
+}
+
+show_codex() {
+    local keys=( FAITHFUL ASCENT GOLDEN_SPAN STILL_HAND ECHO_CHAMBER )
+    local names=( "The Faithful" "The Ascent" "The Golden Span" "The Still Hand" "The Echo Chamber" )
+    local descs=( "One hundred trials recorded."
+                  "Five Apex records set."
+                  "One hundred and fifty catches in a single trial."
+                  "The same score recorded three or more times."
+                  "Your Apex matched three or more times." )
+
+    local discovered=0 total=${#keys[@]}
+    for key in "${keys[@]}"; do codex_discovered "$key" && (( discovered++ )); done
+
+    echo ""
+    echo -e "  ${BOLD}THE CODEX${RESET}  ${DIM}— ${discovered} of ${total} discovered${RESET}"
+    echo -e "  ${DIM}$(printf '─%.0s' {1..38})${RESET}"
+    echo ""
+
+    for (( i=0; i<total; i++ )); do
+        local key="${keys[$i]}"
+        if codex_discovered "$key"; then
+            local entry_date
+            entry_date=$(grep "^${key}," "$CODEX_FILE" | cut -d',' -f2)
+            echo -e "  ${YELLOW}${BOLD}${names[$i]}${RESET}"
+            echo -e "  ${DIM}${descs[$i]}  ·  ${entry_date}${RESET}"
+        else
+            echo -e "  ${DIM}??? — undiscovered${RESET}"
+        fi
+        echo ""
+    done
 }
 
 # ── Show Annals ────────────────────────────────────────────────────────────────
@@ -1921,6 +2031,28 @@ show_lore() {
     echo -e "  Shown in ${BOLD}juggle stats${RESET} when a score has appeared at least twice."
     echo -e "  ${DIM}The wall you keep running into.${RESET}"
 
+    # ── The Codex ─────────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}THE CODEX${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  Permanent discoveries earned through the annals. Each entry is"
+    echo -e "  unlocked once and recorded forever in codex.csv with the date"
+    echo -e "  of discovery."
+    echo ""
+    echo -e "  Undiscovered entries appear as mysteries."
+    echo -e "  Run ${BOLD}juggle codex${RESET} to view your record."
+    echo ""
+    echo -e "  Discoveries fire in The Dispatch the moment their condition is"
+    echo -e "  first satisfied — including retroactively on the next trial"
+    echo -e "  after The Codex is installed."
+    echo ""
+    echo -e "  ${DIM}The Faithful     — One hundred trials recorded.${RESET}"
+    echo -e "  ${DIM}The Ascent       — Five Apex records set.${RESET}"
+    echo -e "  ${DIM}The Golden Span  — One hundred and fifty catches in a single trial.${RESET}"
+    echo -e "  ${DIM}The Still Hand   — The same score recorded three or more times.${RESET}"
+    echo -e "  ${DIM}The Echo Chamber — Your Apex matched three or more times.${RESET}"
+
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo ""
@@ -1947,6 +2079,7 @@ usage() {
     echo -e "    juggle last            Show most recent entry"
     echo -e "    juggle undo            Remove most recent entry"
     echo -e "    juggle lore            All systems explained: Omens, Auguries, Grades & more"
+    echo -e "    juggle codex           The Codex: permanent discoveries & achievements"
     echo -e "    juggle --help          Show this help"
     echo ""
     echo -e "  ${DIM}Data stored in: ${DATA_DIR}/${RESET}"
@@ -1955,6 +2088,7 @@ usage() {
     echo -e "  ${DIM}  milestones.csv   — omen log (type,key)${RESET}"
     echo -e "  ${DIM}  pb_history.csv   — Apex record (date,time,catches)${RESET}"
     echo -e "  ${DIM}  streak_state.csv — chain / omen state${RESET}"
+    echo -e "  ${DIM}  codex.csv        — discovery log (key,date)${RESET}"
     echo ""
 }
 
@@ -2007,6 +2141,9 @@ case "$1" in
         ;;
     lore)
         show_lore
+        ;;
+    codex)
+        show_codex
         ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]]; then
