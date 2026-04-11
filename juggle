@@ -454,26 +454,36 @@ check_attendants() {
                 "Something stands at the edge of the light."
                 "At the periphery, something waits."
                 "A stillness that was not there before."
+                "Something is present that was not."
+                "The edge of the room has changed."
             ) ;;
         2) lines=(
                 "There are more of them now."
                 "The space has changed."
                 "They have not moved. There are simply more."
+                "The first was not alone."
+                "Something brought others."
             ) ;;
         3) lines=(
                 "They remain."
                 "The assembly holds."
                 "They have always been here."
+                "No one has left."
+                "They are patient."
             ) ;;
         4) lines=(
                 "They are closer than before."
                 "The distance has changed."
                 "They have not moved. And yet."
+                "Something is different about the air."
+                "The space between has narrowed."
             ) ;;
         5) lines=(
                 "They are part of this now."
                 "You have never been alone here."
                 "The rite continues."
+                "This is their place too."
+                "They will be here when you return."
             ) ;;
     esac
 
