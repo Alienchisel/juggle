@@ -543,13 +543,13 @@ check_codex() {
 }
 
 show_codex() {
-    local keys=( FAITHFUL ASCENT GOLDEN_SPAN STILL_HAND ECHO_CHAMBER )
-    local names=( "The Faithful" "The Ascent" "The Golden Span" "The Still Hand" "The Echo Chamber" )
+    local keys=( FAITHFUL STILL_HAND ASCENT ECHO_CHAMBER GOLDEN_SPAN )
+    local names=( "The Faithful" "The Still Hand" "The Ascent" "The Echo Chamber" "The Golden Span" )
     local descs=( "One hundred trials recorded."
-                  "Five Apex records set."
-                  "One hundred and fifty catches in a single trial."
                   "The same score recorded three or more times."
-                  "Your Apex matched three or more times." )
+                  "Five Apex records set."
+                  "Your Apex matched three or more times."
+                  "One hundred and fifty catches in a single trial." )
 
     local discovered=0 total=${#keys[@]}
     for key in "${keys[@]}"; do codex_discovered "$key" && (( discovered++ )); done
