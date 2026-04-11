@@ -1259,6 +1259,30 @@ check_codex() {
         echo "${cur_nemesis},${cur_nemesis_count}" > "$NEMESIS_FILE"
     fi
 
+    # The Archivist — 25 entries discovered
+    if ! codex_discovered "ARCHIVIST"; then
+        local _disc
+        _disc=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
+        if (( _disc >= 25 )); then
+            record_codex "ARCHIVIST" "$today"
+            print_codex_discovery "The Archivist" "Twenty-five entries recorded in the Codex."
+            any=1
+        fi
+    fi
+
+    # Omnia — all other entries discovered
+    # NOTE: update _omnia_total when new entries are added to show_codex
+    if ! codex_discovered "OMNIA"; then
+        local _disc_omnia
+        _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
+        local _omnia_total=51
+        if (( _disc_omnia >= _omnia_total - 1 )); then
+            record_codex "OMNIA" "$today"
+            print_codex_discovery "Omnia" "The record complete."
+            any=1
+        fi
+    fi
+
     (( any )) && echo ""
 }
 
@@ -1271,6 +1295,7 @@ show_codex() {
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
                  BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD
+                 ARCHIVIST OMNIA
                 ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
@@ -1280,6 +1305,7 @@ show_codex() {
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
                   "The Breaking of Limits" "The High Current" "The Thousandfold Trial"
+                  "The Archivist" "Omnia"
                   "The First Shadow" "The Gathering" "The Silent Assembly" "The Nearing" "The Established Rite" )
     local descs=( "Five trials recorded."
                   "Ten trials recorded."
@@ -1325,6 +1351,8 @@ show_codex() {
                   "Five hundred catches in a single trial."
                   "Seven hundred and fifty catches in a single trial."
                   "One thousand catches in a single trial."
+                  "Twenty-five entries recorded in the Codex."
+                  "The record complete."
                   "Something stood at the edge of the light."
                   "They were not alone."
                   "The assembly holds."

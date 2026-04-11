@@ -84,6 +84,15 @@ Update this file whenever a new entry is added.
 
 ---
 
+## Meta
+
+| Key | Name | Condition | Notes |
+|-----|------|-----------|-------|
+| ARCHIVIST | The Archivist | 25 Codex entries discovered | Uses live count of codex.csv entries; no backfill needed (fires on next qualifying trial) |
+| OMNIA | Omnia | All other Codex entries discovered | `_omnia_total` in check_codex must be updated when new entries are added |
+
+---
+
 ## The Attendants
 
 Sequential — each stage requires the previous to be discovered first.
