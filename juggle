@@ -1635,13 +1635,14 @@ show_stats() {
     ' "$DATA_FILE")"
 
     # Next title threshold
-    local next_title_catches=0 next_title_name=""
+    local next_title_catches=0 next_title_name="" prev_title_catches=0
     local _thresholds=(5 10 15 20 25 30 40 50 75 100 125 150 175 200 250 300 400 500 750 1000)
     local _names=("Apprentice" "Initiate" "Adept" "Keeper" "Knight" "Harbinger" "Conjuror" "Sage" "Phantom" "Sovereign" "Luminant" "Oracle" "Auric" "Specter" "Empyrean" "Revenant" "Colossus" "Legend" "Paragon" "Immortal")
     for (( _i=0; _i<${#_thresholds[@]}; _i++ )); do
         if (( pb < _thresholds[_i] )); then
             next_title_catches=${_thresholds[_i]}
             next_title_name="${_names[_i]}"
+            (( _i > 0 )) && prev_title_catches=${_thresholds[_i-1]}
             break
         fi
     done
@@ -1683,7 +1684,19 @@ show_stats() {
     echo -e "  ${BOLD}Title         :${RESET}  ${stats_rank}"
     if (( next_title_catches > 0 )); then
         local _needed=$(( next_title_catches - pb ))
-        echo -e "  ${BOLD}Next title    :${RESET}  ${next_title_name}  ${DIM}(${_needed} more catches)${RESET}"
+        local _range=$(( next_title_catches - prev_title_catches ))
+        local _done=$(( pb - prev_title_catches ))
+        local _bar_width=20
+        local _filled=$(( _done * _bar_width / _range ))
+        (( _filled > _bar_width )) && _filled=$_bar_width
+        local _bar=""
+        for (( _b=0; _b<_bar_width; _b++ )); do
+            if (( _b < _filled )); then _bar+="="
+            elif (( _b == _filled )); then _bar+=">"
+            else _bar+=" "
+            fi
+        done
+        echo -e "  ${BOLD}Next title    :${RESET}  ${next_title_name}  ${DIM}[${_bar}]  ${pb} / ${next_title_catches}${RESET}"
     else
         echo -e "  ${BOLD}Next title    :${RESET}  ${DIM}none — maximum title reached${RESET}"
     fi
