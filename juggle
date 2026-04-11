@@ -786,9 +786,12 @@ show_trend() {
         fi
     done
 
-    # ── Day-of-week breakdown ─────────────────────────────────────────────────
+    # ── Day-of-week breakdown (last 12 weeks) ────────────────────────────────
+    local dow_window_start
+    dow_window_start=$(date -d "$week_start -11 weeks" +%Y-%m-%d)
     local dow_data
-    dow_data=$(awk -F',' '
+    dow_data=$(awk -F',' -v from="$dow_window_start" '
+        $1 < from { next }
         {
             split($1, dt, "-")
             t = mktime(dt[1] " " dt[2] " " dt[3] " 12 0 0")
@@ -835,7 +838,7 @@ show_trend() {
 
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}DAY OF WEEK${RESET}"
+    echo -e "  ${BOLD}DAY OF WEEK${RESET}  ${DIM}(last 12 weeks)${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     local _dow_names=("Mon" "Tue" "Wed" "Thu" "Fri" "Sat" "Sun")
     for (( _d=0; _d<7; _d++ )); do
