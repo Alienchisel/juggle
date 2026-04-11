@@ -77,6 +77,7 @@ Rolling average of the last 20 trials. Fires once on first qualifying trial; req
 | RESONANCE | The Resonance | Current Apex matched on 5+ separate calendar days | Resets if Apex broken |
 | UNBROKEN_REFLECTION | The Unbroken Reflection | Current Apex matched on 3 consecutive calendar days | Resets if Apex broken |
 | UNBLEMISHED | The Unblemished | Every one of the last 20 trials scored ≥ 50% of Apex | Requires 20+ trials |
+| QUIET_INTERVAL | The Quiet Interval | Narrow Path and Unblemished conditions both met simultaneously | Requires 20+ trials |
 | FIRST_NAME | The First Name | First time PB reaches a title above Neophyte (PB ≥ 5) | Historical backfill: scans pb_history.csv for first entry ≥ 5 |
 | ASSUMPTION | The Assumption | Score ≥ 80% of PB on the trial immediately after crossing a title threshold | Granted unconditionally upon reaching Immortal (1000 catches) if not yet earned |
 | NOTED | The Noted | The Witness has spoken 30 times | Counter starts from witness_count creation; no historical backfill |

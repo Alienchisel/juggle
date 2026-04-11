@@ -1063,6 +1063,20 @@ check_codex() {
         fi
     fi
 
+    # The Quiet Interval — Narrow Path and Unblemished conditions both met simultaneously
+    if ! codex_discovered "QUIET_INTERVAL" && (( total >= 20 && pb > 0 )); then
+        local _quiet
+        _quiet=$(tail -n20 "$DATA_FILE" | awk -F',' -v pb="$pb" '
+            BEGIN{mn=999; mx=0}
+            { v=$3+0; if(v<mn)mn=v; if(v>mx)mx=v; if(v*100/pb < 50)fail=1 }
+            END{ print (!fail && mx-mn<=10) ? 1 : 0 }')
+        if (( _quiet )); then
+            record_codex "QUIET_INTERVAL" "$today"
+            print_codex_discovery "The Quiet Interval" "The range was narrow. Not one fell short."
+            any=1
+        fi
+    fi
+
     # The Assumption — ≥80% PB on the trial immediately after a title crossing,
     # or granted automatically upon reaching Immortal (1000 catches)
     if ! codex_discovered "ASSUMPTION"; then
@@ -1403,7 +1417,7 @@ check_codex() {
     if ! codex_discovered "OMNIA"; then
         local _disc_omnia
         _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        local _omnia_total=62
+        local _omnia_total=63
         if (( _disc_omnia >= _omnia_total - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
@@ -1419,7 +1433,7 @@ show_codex() {
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  FIRST_TALLY MYRIAD LEGION
                  ESTABLISHED_FORM HIGH_STANDARD IMMACULATE
-                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED FIRST_NAME ASSUMPTION NOTED SUSTAINED INEXORABLE UNRELENTING ONSLAUGHT FULL_AUGURY
+                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED QUIET_INTERVAL FIRST_NAME ASSUMPTION NOTED SUSTAINED INEXORABLE UNRELENTING ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
@@ -1431,7 +1445,7 @@ show_codex() {
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The First Tally" "The Myriad" "The Legion"
                   "The Established Form" "The High Standard" "The Immaculate"
-                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Four Watches" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The First Name" "The Assumption" "The Noted" "The Sustained" "The Inexorable" "The Unrelenting" "The Onslaught" "The Full Augury"
+                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Four Watches" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Quiet Interval" "The First Name" "The Assumption" "The Noted" "The Sustained" "The Inexorable" "The Unrelenting" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent" "The Usurper"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
@@ -1466,6 +1480,7 @@ show_codex() {
                   "The Apex reached on five separate days."
                   "Three days in a row, the Apex was met."
                   "Not one of the last twenty fell below the mark."
+                  "The range was narrow. Not one fell short."
                   "A title above Neophyte was earned."
                   "The new rank was met without hesitation."
                   "The Witness had spoken thirty times."
