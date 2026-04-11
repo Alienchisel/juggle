@@ -713,6 +713,16 @@ check_milestones() {
     # Save updated state
     echo "${streak_peak},${spree_count},${dominance_active},${spree_peak},${echo_peak}" > "$STREAK_FILE"
 
+    # The Onslaught — Spree and Dominance both active simultaneously
+    if ! codex_discovered "ONSLAUGHT"; then
+        if (( spree_count >= 3 && dominance_active )); then
+            record_codex "ONSLAUGHT" "$today"
+            print_codex_discovery "The Onslaught" \
+                "Sustained and relentless."
+            any=1
+        fi
+    fi
+
     # The Full Augury — all auguries active simultaneously
     # NOTE: if new auguries are added, update the condition below to include them
     if ! codex_discovered "FULL_AUGURY"; then
@@ -1189,7 +1199,7 @@ check_codex() {
 show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
-                 STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED FULL_AUGURY
+                 STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
@@ -1198,7 +1208,7 @@ show_codex() {
                 ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
-                  "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Full Augury"
+                  "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
@@ -1224,6 +1234,7 @@ show_codex() {
                   "Not one unworthy trial among the last twenty."
                   "A new title claimed, and the form held."
                   "You have not gone unseen."
+                  "Sustained and relentless."
                   "Nothing was lacking."
                   "Others were listening."
                   "The record broke. They were there."
