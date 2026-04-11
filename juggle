@@ -614,6 +614,45 @@ check_codex() {
         fi
     fi
 
+    # The Unbroken Reflection — Apex matched on 3+ consecutive calendar days
+    if ! codex_discovered "UNBROKEN_REFLECTION" && (( catches == pb && pb > 0 )); then
+        local apex_date_r unbroken
+        apex_date_r=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
+        unbroken=$(awk -F',' -v pb="$pb" -v d="$apex_date_r" '
+            function date_to_days(dt,    y,m,dy) {
+                y  = substr(dt,1,4)+0
+                m  = substr(dt,6,2)+0
+                dy = substr(dt,9,2)+0
+                if (m <= 2) { m += 12; y-- }
+                return int(365.25*(y+4716)) + int(30.6001*(m+1)) + dy - 1524
+            }
+            $1 >= d && $3 == pb { dates[$1]=1 }
+            END {
+                n = 0
+                for (dt in dates) arr[++n] = dt
+                for (i=1; i<=n; i++)
+                    for (j=i+1; j<=n; j++)
+                        if (arr[i] > arr[j]) { t=arr[i]; arr[i]=arr[j]; arr[j]=t }
+                consec = 1
+                for (i=2; i<=n; i++) {
+                    if (date_to_days(arr[i]) - date_to_days(arr[i-1]) == 1) {
+                        consec++
+                        if (consec >= 3) { print 1; exit }
+                    } else {
+                        consec = 1
+                    }
+                }
+                print 0
+            }
+        ' "$DATA_FILE")
+        if (( unbroken )); then
+            record_codex "UNBROKEN_REFLECTION" "$today"
+            print_codex_discovery "The Unbroken Reflection" \
+                "Your Apex matched on three consecutive days."
+            any=1
+        fi
+    fi
+
     # The Gathering Form — 10 catches in a single trial
     if ! codex_discovered "GATHERING_FORM" && (( catches >= 10 )); then
         record_codex "GATHERING_FORM" "$today"
@@ -708,13 +747,13 @@ check_codex() {
 show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
-                 STILL_HAND ASCENT ECHO_CHAMBER RESONANCE
+                 STILL_HAND ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
                  BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
-                  "The Still Hand" "The Ascent" "The Echo Chamber" "The Resonance"
+                  "The Still Hand" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
                   "The Breaking of Limits" "The High Current" "The Thousandfold Trial" )
@@ -731,6 +770,7 @@ show_codex() {
                   "Five Apex records set."
                   "Your Apex matched three or more times."
                   "Your Apex matched across five separate days."
+                  "Your Apex matched on three consecutive days."
                   "Ten catches in a single trial."
                   "Twenty-five catches in a single trial."
                   "Fifty catches in a single trial."
