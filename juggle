@@ -2247,16 +2247,17 @@ show_year() {
 # ── Last entry ─────────────────────────────────────────────────────────────────
 
 show_last() {
+    local n=${1:-1}
     local total
     total=$(total_sessions)
     if (( total == 0 )); then
         echo -e "\n  No trials logged yet.\n"
         return
     fi
-    local last_date last_time last_catches
-    IFS=',' read -r last_date last_time last_catches <<< "$(tail -n1 "$DATA_FILE")"
+    (( n > total )) && n=$total
     echo ""
-    echo -e "  ${BOLD}Last trial:${RESET}  ${BOLD}${last_catches} catches${RESET}  ${DIM}(${last_date} ${last_time})${RESET}"
+    tail -n"$n" "$DATA_FILE" | tac | awk -F',' -v bold="\033[1m" -v dim="\033[2m" -v reset="\033[0m" \
+        '{ printf "  " bold "%-6s" reset "  " dim "%s  %s" reset "\n", $3, $1, $2 }'
     echo ""
 }
 
@@ -2557,7 +2558,8 @@ usage() {
     echo -e "    juggle week  [YYYY-MM-DD] This week (or week containing date) recap"
     echo -e "    juggle month [YYYY-MM] This month (or specific month) recap"
     echo -e "    juggle year  [YYYY]    This year (or specific year) recap"
-    echo -e "    juggle last            Show most recent entry"
+    echo -e "    juggle last            Show most recent trial"
+    echo -e "    juggle last ${CYAN}<N>${RESET}        Show last N trials"
     echo -e "    juggle undo            Remove most recent entry"
     echo -e "    juggle lore            All systems explained: Omens, Auguries, Grades & more"
     echo -e "    juggle codex           The Codex: permanent discoveries & achievements"
@@ -2615,7 +2617,14 @@ case "$1" in
         show_year "$2"
         ;;
     last)
-        show_last
+        if [[ -z "$2" ]]; then
+            show_last 1
+        elif [[ "$2" =~ ^[0-9]+$ ]]; then
+            show_last "$2"
+        else
+            echo -e "\n  ${RED}Unknown argument:${RESET} juggle last ${2}\n"
+            usage
+        fi
         ;;
     undo)
         undo_last
