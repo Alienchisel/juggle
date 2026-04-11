@@ -1761,7 +1761,16 @@ show_lore() {
     echo ""
     echo -e "  ${BOLD}${CYAN}IVGVLATOR — LORE & SYSTEMS${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${DIM}The systems behind the Annals.${RESET}"
+
+    # ── The Annals ────────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}THE ANNALS${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  The cumulative record of every trial ever logged — the"
+    echo -e "  full history from which ranks, titles, omens, and all"
+    echo -e "  other measures are derived. ${BOLD}juggle top${RESET} shows the Annals"
+    echo -e "  ranked by catch count."
 
     # ── The Apex ─────────────────────────────────────────────────────────────
     echo ""
