@@ -2142,12 +2142,6 @@ show_lore() {
     echo -e "  Discoveries fire in The Dispatch the moment their condition is"
     echo -e "  first satisfied — including retroactively on the next trial"
     echo -e "  after The Codex is installed."
-    echo ""
-    echo -e "  ${DIM}The Faithful     — One hundred trials recorded.${RESET}"
-    echo -e "  ${DIM}The Ascent       — Five Apex records set.${RESET}"
-    echo -e "  ${DIM}The Golden Span  — One hundred and fifty catches in a single trial.${RESET}"
-    echo -e "  ${DIM}The Still Hand   — The same score recorded three or more times.${RESET}"
-    echo -e "  ${DIM}The Echo Chamber — Your Apex matched three or more times.${RESET}"
 
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
