@@ -328,6 +328,11 @@ log_score() {
 
     print_grade "$catches" "$display_pb"
 
+    if (( catches > pb )); then
+        echo -e "  ${YELLOW}${BOLD}Sine pari.${RESET}"
+        echo ""
+    fi
+
     # ── Augury line ────────────────────────────────────────────────────────────
     local _sp _sc _da
     IFS=',' read -r _sp _sc _da < "$STREAK_FILE"
@@ -907,7 +912,7 @@ show_apex() {
         grade="${grade_info%%|*}"
         grade_colour="${grade_info##*|}"
         if (( ph_val == pb )); then
-            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}\n" \
+            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}  ${YELLOW}${BOLD}Sine pari.${RESET}\n" \
                 "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
         else
             printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}\n" \
