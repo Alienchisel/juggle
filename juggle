@@ -895,6 +895,57 @@ check_codex() {
         fi
     fi
 
+    # The Mirror — palindrome score >= 11 (historical scan)
+    if ! codex_discovered "MIRROR"; then
+        local mirror_date
+        mirror_date=$(awk -F',' '
+            function is_pal(n,   s,r,i) {
+                s=n""; r=""
+                for(i=length(s);i>=1;i--) r=r substr(s,i,1)
+                return s==r
+            }
+            $3+0 >= 11 && is_pal($3+0) { print $1; exit }
+        ' "$DATA_FILE")
+        if [[ -n "$mirror_date" ]]; then
+            record_codex "MIRROR" "$mirror_date"
+            if [[ "$mirror_date" == "$today" ]]; then
+                print_codex_discovery "The Mirror" \
+                    "The score read the same from both ends."
+                any=1
+            fi
+        fi
+    fi
+
+    # The Deep Mirror — palindrome score >= 101
+    if ! codex_discovered "DEEP_MIRROR" && (( catches >= 101 )); then
+        local s="$catches" rev=""
+        local i
+        for (( i=${#s}-1; i>=0; i-- )); do rev+="${s:$i:1}"; done
+        if [[ "$s" == "$rev" ]]; then
+            record_codex "DEEP_MIRROR" "$today"
+            print_codex_discovery "The Deep Mirror" \
+                "The reflection held at depth."
+            any=1
+        fi
+    fi
+
+    # The Sieve — every prime under 100 logged at least once
+    if ! codex_discovered "SIEVE"; then
+        local _primes=(2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97)
+        local _sieve_ok=1
+        for _p in "${_primes[@]}"; do
+            if ! awk -F',' -v p="$_p" '$3+0==p {found=1; exit} END {exit !found}' "$DATA_FILE"; then
+                _sieve_ok=0; break
+            fi
+        done
+        if (( _sieve_ok )); then
+            record_codex "SIEVE" "$today"
+            print_codex_discovery "The Sieve" \
+                "Every prime beneath one hundred, once recorded."
+            any=1
+        fi
+    fi
+
     # The Gathering Form — 10 catches in a single trial
     if ! codex_discovered "GATHERING_FORM" && (( catches >= 10 )); then
         record_codex "GATHERING_FORM" "$today"
@@ -990,7 +1041,7 @@ show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION
-                 CORRESPONDENCE SEQUENCE
+                 CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
                  BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD
@@ -998,7 +1049,7 @@ show_codex() {
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection"
-                  "The Correspondence" "The Sequence"
+                  "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
                   "The Breaking of Limits" "The High Current" "The Thousandfold Trial"
@@ -1021,6 +1072,9 @@ show_codex() {
                   "Your Apex matched on three consecutive days."
                   "The count and the record aligned."
                   "Three steps, each one higher."
+                  "The score read the same from both ends."
+                  "The reflection held at depth."
+                  "Every prime beneath one hundred, once recorded."
                   "Ten catches in a single trial."
                   "Twenty-five catches in a single trial."
                   "Fifty catches in a single trial."
