@@ -722,9 +722,11 @@ show_trend() {
     done
 
     # ── Time-of-day breakdown ─────────────────────────────────────────────────
-    # One pass: band counts + per-hour counts
-    local tod_data
+    # Skip entries with placeholder timestamp 00:00:00 (migrated from timeless records)
+    local tod_data tod_real_count
+    tod_real_count=$(awk -F',' '$2 != "00:00:00"' "$DATA_FILE" | wc -l | tr -d ' ')
     tod_data=$(awk -F',' '
+        $2 == "00:00:00" { next }
         {
             split($2, t, ":"); h = t[1]+0
             if      (h <= 5)  vigil++
@@ -759,7 +761,7 @@ show_trend() {
             if (( b < filled )); then bar+="█"; else bar+="░"; fi
         done
         local pct=0
-        (( total > 0 )) && pct=$(( count * 100 / total ))
+        (( tod_real_count > 0 )) && pct=$(( count * 100 / tod_real_count ))
         printf "%s  %3d%%" "$bar" "$pct"
     }
 
@@ -855,13 +857,17 @@ show_trend() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}WHEN YOU TRAIN${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    printf "  ${BOLD}%-10s${RESET}  %s\n" "Dawn"     "$(tod_bar "$tod_dawn"     "$tod_max")"
-    printf "  ${BOLD}%-10s${RESET}  %s\n" "Meridian" "$(tod_bar "$tod_meridian" "$tod_max")"
-    printf "  ${BOLD}%-10s${RESET}  %s\n" "Dusk"     "$(tod_bar "$tod_dusk"     "$tod_max")"
-    printf "  ${BOLD}%-10s${RESET}  %s\n" "Vigil"    "$(tod_bar "$tod_vigil"    "$tod_max")"
-    echo ""
-    echo -e "  ${BOLD}By hour${RESET}    ${hour_spark}"
-    echo -e "  ${DIM}           └ 00                  23 ┘${RESET}"
+    if (( tod_real_count == 0 )); then
+        echo -e "  ${DIM}No timestamped entries yet.${RESET}"
+    else
+        printf "  ${BOLD}%-10s${RESET}  %s\n" "Dawn"     "$(tod_bar "$tod_dawn"     "$tod_max")"
+        printf "  ${BOLD}%-10s${RESET}  %s\n" "Meridian" "$(tod_bar "$tod_meridian" "$tod_max")"
+        printf "  ${BOLD}%-10s${RESET}  %s\n" "Dusk"     "$(tod_bar "$tod_dusk"     "$tod_max")"
+        printf "  ${BOLD}%-10s${RESET}  %s\n" "Vigil"    "$(tod_bar "$tod_vigil"    "$tod_max")"
+        echo ""
+        echo -e "  ${BOLD}By hour${RESET}    ${hour_spark}"
+        echo -e "  ${DIM}           └ 00                  23 ┘${RESET}"
+    fi
     echo ""
 }
 
