@@ -80,6 +80,8 @@ Rolling average of the last 20 trials. Fires once on first qualifying trial; req
 | FIRST_NAME | The First Name | First time PB reaches a title above Neophyte (PB ≥ 5) | Historical backfill: scans pb_history.csv for first entry ≥ 5 |
 | ASSUMPTION | The Assumption | Score ≥ 80% of PB on the trial immediately after crossing a title threshold | Granted unconditionally upon reaching Immortal (1000 catches) if not yet earned |
 | NOTED | The Noted | The Witness has spoken 30 times | Counter starts from witness_count creation; no historical backfill |
+| SUSTAINED | The Sustained | Spree of 10+ consecutive worthy trials | |
+| INEXORABLE | The Inexorable | Spree of 25+ consecutive worthy trials | |
 | ONSLAUGHT | The Onslaught | Spree (3+ consecutive worthy trials) and Dominance (5 of last 10 ≥ 80% Apex) both active simultaneously | |
 | FULL_AUGURY | The Full Augury | Chain, Spree, Dominance, and Echo all active simultaneously | Update condition if new auguries are added |
 
