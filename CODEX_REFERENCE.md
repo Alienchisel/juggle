@@ -21,6 +21,16 @@ Update this file whenever a new entry is added.
 
 ---
 
+## Total Catch Milestones
+
+| Key | Name | Condition | Notes |
+|-----|------|-----------|-------|
+| FIRST_TALLY | The First Tally | 1,000 cumulative catches across all trials | Sums scores.csv column 3 |
+| MYRIAD | The Myriad | 10,000 cumulative catches across all trials | Sums scores.csv column 3 |
+| LEGION | The Legion | 100,000 cumulative catches across all trials | Sums scores.csv column 3 |
+
+---
+
 ## Catch Milestones
 
 | Key | Name | Condition |

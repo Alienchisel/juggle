@@ -1259,6 +1259,39 @@ check_codex() {
         echo "${cur_nemesis},${cur_nemesis_count}" > "$NEMESIS_FILE"
     fi
 
+    # The First Tally — 1,000 total catches across all trials
+    if ! codex_discovered "FIRST_TALLY"; then
+        local _total_catches
+        _total_catches=$(awk -F',' '{s+=$3} END{print s+0}' "$SCORES_FILE")
+        if (( _total_catches >= 1000 )); then
+            record_codex "FIRST_TALLY" "$today"
+            print_codex_discovery "The First Tally" "One thousand catches in total."
+            any=1
+        fi
+    fi
+
+    # The Myriad — 10,000 total catches across all trials
+    if ! codex_discovered "MYRIAD"; then
+        local _total_catches_m
+        _total_catches_m=$(awk -F',' '{s+=$3} END{print s+0}' "$SCORES_FILE")
+        if (( _total_catches_m >= 10000 )); then
+            record_codex "MYRIAD" "$today"
+            print_codex_discovery "The Myriad" "Ten thousand catches in total."
+            any=1
+        fi
+    fi
+
+    # The Legion — 100,000 total catches across all trials
+    if ! codex_discovered "LEGION"; then
+        local _total_catches_l
+        _total_catches_l=$(awk -F',' '{s+=$3} END{print s+0}' "$SCORES_FILE")
+        if (( _total_catches_l >= 100000 )); then
+            record_codex "LEGION" "$today"
+            print_codex_discovery "The Legion" "One hundred thousand catches in total."
+            any=1
+        fi
+    fi
+
     # The Archivist — 25 entries discovered
     if ! codex_discovered "ARCHIVIST"; then
         local _disc
@@ -1275,7 +1308,7 @@ check_codex() {
     if ! codex_discovered "OMNIA"; then
         local _disc_omnia
         _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        local _omnia_total=51
+        local _omnia_total=54
         if (( _disc_omnia >= _omnia_total - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
@@ -1289,6 +1322,7 @@ check_codex() {
 show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
+                 FIRST_TALLY MYRIAD LEGION
                  STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
@@ -1299,6 +1333,7 @@ show_codex() {
                 ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
+                  "The First Tally" "The Myriad" "The Legion"
                   "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent" "The Usurper"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
@@ -1316,6 +1351,9 @@ show_codex() {
                   "A thousand times entered."
                   "Two thousand. The hours were uncounted."
                   "Five thousand. The ledger had no end."
+                  "One thousand catches, gathered across all trials."
+                  "Ten thousand. The myriad was complete."
+                  "One hundred thousand caught."
                   "The same score returned."
                   "Seven of the same, one after another."
                   "Twenty trials within ten of each other."
