@@ -435,7 +435,7 @@ check_attendants() {
 
     local idx=$(( RANDOM % ${#lines[@]} ))
     echo ""
-    echo -e "  ${DIM}${lines[$idx]}${RESET}"
+    echo -e "  ${DIM}${ITALIC}${lines[$idx]}${RESET}"
     echo ""
 }
 
