@@ -1020,15 +1020,12 @@ show_stats() {
     ')"
 
     # Steadfastness: % of trials >= 50% of pb
-    local consist_recent consist_alltime
+    local consist_recent steadfast_threshold
     consist_recent=$(tail -n20 "$DATA_FILE" | awk -F',' -v pb="$pb" '
         { t++; if (pb > 0 && $3 * 100 / pb >= 50) g++ }
         END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
     ')
-    consist_alltime=$(awk -F',' -v pb="$pb" '
-        { t++; if (pb > 0 && $3 * 100 / pb >= 50) g++ }
-        END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
-    ' "$DATA_FILE")
+    steadfast_threshold=$(( pb / 2 ))
 
     # Zone: % of last 20 trials >= all-time 75th-percentile threshold
     local zone_pct=0 zone_threshold=0
@@ -1134,7 +1131,7 @@ show_stats() {
     echo -e "  ${BOLD}Best chain    :${RESET}  ${best_streak} consecutive day(s)"
     echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(10th percentile, last 20 trials)${RESET}"
     echo -e "  ${BOLD}Ceiling       :${RESET}  ${ceiling_val} catches  ${DIM}(90th percentile, last 20 trials)${RESET}"
-    echo -e "  ${BOLD}Steadfastness :${RESET}  ${consist_recent}%  ${DIM}(last 20)  /  ${consist_alltime}% all-time${RESET}"
+    echo -e "  ${BOLD}Steadfastness :${RESET}  ${consist_recent}%  ${DIM}(last 20)  ≥ ${steadfast_threshold} catches${RESET}"
     echo -e "  ${BOLD}Zone          :${RESET}  ${zone_pct}%  ${DIM}(last 20)  ≥ ${zone_threshold} catches${RESET}"
     if (( nemesis_count >= 2 )); then
         echo -e "  ${BOLD}Nemesis       :${RESET}  ${RED}${nemesis_score} catches${RESET}  ${DIM}(${nemesis_count} times)${RESET}"
