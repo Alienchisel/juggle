@@ -1501,6 +1501,15 @@ show_stats() {
     local avg sum
     read -r sum avg <<< "$(awk -F',' '{s+=$3} END {printf "%d %.1f", s, s/NR}' "$DATA_FILE")"
 
+    local median
+    median=$(awk -F',' '{print $3+0}' "$DATA_FILE" | sort -n | awk '
+        { vals[NR] = $1 }
+        END {
+            n = NR
+            if (n % 2 == 1) printf "%.1f", vals[(n+1)/2]
+            else             printf "%.1f", (vals[n/2] + vals[n/2+1]) / 2
+        }')
+
     local last_date last_time last_catches
     IFS=',' read -r last_date last_time last_catches <<< "$(tail -n1 "$DATA_FILE")"
 
@@ -1681,7 +1690,7 @@ show_stats() {
     echo -e "  ${BOLD}Last trial    :${RESET}  ${last_catches} catches  ${DIM}(${last_date} ${last_time})${RESET}"
     echo -e "  ${BOLD}Last grade    :${RESET}  ${stats_grade_colour}${stats_grade}${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${total}"
-    echo -e "  ${BOLD}Average       :${RESET}  ${avg} catches"
+    echo -e "  ${BOLD}Average       :${RESET}  ${avg} catches  ${DIM}(median: ${median})${RESET}"
     echo -e "  ${BOLD}Total catches :${RESET}  ${sum}"
     echo ""
     echo -e "  ${BOLD}This month    :${RESET}  ${month_sessions} trial(s), avg ${month_avg}  ${DIM}(all-time avg: ${avg})${RESET}"
