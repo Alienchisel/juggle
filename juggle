@@ -378,6 +378,11 @@ witness_speak() {
             echo ""
             print_codex_discovery "The Noted" "You have not gone unseen."
         fi
+        if codex_discovered "ATTENDANT_3" && ! codex_discovered "CONGREGATION"; then
+            record_codex "CONGREGATION" "$today"
+            echo ""
+            print_codex_discovery "The Congregation" "Others were listening."
+        fi
         echo ""
     fi
 }
@@ -490,6 +495,11 @@ log_score() {
     if (( catches > pb )); then
         echo -e "  ${YELLOW}${BOLD}A new Apex is set.${RESET}"
         echo -e "  ${GREEN}${BOLD}${catches} catches.${RESET} The old Apex of ${pb} is surpassed."
+        if codex_discovered "ATTENDANT_2" && ! codex_discovered "WITNESSED_ASCENT"; then
+            record_codex "WITNESSED_ASCENT" "$today"
+            print_codex_discovery "The Witnessed Ascent" \
+                "The record broke. They were there."
+        fi
     elif (( catches == pb && pb > 0 )); then
         local ec
         ec=$(echo_count "$pb")
@@ -1064,6 +1074,7 @@ show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION NOTED
+                 CONGREGATION WITNESSED_ASCENT
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
@@ -1072,6 +1083,7 @@ show_codex() {
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Noted"
+                  "The Congregation" "The Witnessed Ascent"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
@@ -1094,6 +1106,8 @@ show_codex() {
                   "Your Apex matched across five separate days."
                   "Your Apex matched on three consecutive days."
                   "You have not gone unseen."
+                  "Others were listening."
+                  "The record broke. They were there."
                   "The count and the record aligned."
                   "Three steps, each one higher."
                   "The score read the same from both ends."
