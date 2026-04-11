@@ -47,6 +47,8 @@ Update this file whenever a new entry is added.
 | SEPTEM | Septem | Same score logged 7 times in a row | Historical scan of full scores.csv |
 | NARROW_PATH | The Narrow Path | Last 20 trials span a range of ≤ 10 catches | Max minus min ≤ 10 |
 | CLIMB_WITHOUT_FALL | The Climb Without Fall | 5 consecutive trials each strictly higher than the last | |
+| THIRTY | The Thirty | Active Chain ≥ 30 days | Fires while chain is live; no historical backfill |
+| ANNUM | The Annum | Active Chain ≥ 365 days | Fires while chain is live; no historical backfill |
 | ASCENT | The Ascent | 5+ entries in pb_history (5 Apex records set) | |
 | ECHO_CHAMBER | The Echo Chamber | Current Apex matched 3+ times since it was set | Resets if Apex broken |
 | RESONANCE | The Resonance | Current Apex matched on 5+ separate calendar days | Resets if Apex broken |
