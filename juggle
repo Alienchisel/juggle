@@ -1309,34 +1309,30 @@ check_codex() {
     fi
 
     # Rolling average entries — last 20 trials
-    local _rolling_avg
-    _rolling_avg=$(tail -20 "$SCORES_FILE" | awk -F',' '{s+=$3; n++} END{print (n>=20 ? s/n : 0)}')
+    # All three thresholds computed in a single awk pass to avoid awk BEGIN stdin hang
+    local _avg_q25 _avg_q50 _avg_q100
+    read -r _avg_q25 _avg_q50 _avg_q100 <<< "$(tail -20 "$SCORES_FILE" | awk -F',' \
+        '{s+=$3; n++} END{avg=(n>=20 ? s/n : 0); print (avg>=25)?1:0, (avg>=50)?1:0, (avg>=100)?1:0}')"
 
     # The Established Form — rolling average of last 20 >= 25
-    if ! codex_discovered "ESTABLISHED_FORM"; then
-        if awk "BEGIN{exit !($_rolling_avg >= 25)}"; then
-            record_codex "ESTABLISHED_FORM" "$today"
-            print_codex_discovery "The Established Form" "The last twenty settled above twenty-five."
-            any=1
-        fi
+    if ! codex_discovered "ESTABLISHED_FORM" && (( _avg_q25 )); then
+        record_codex "ESTABLISHED_FORM" "$today"
+        print_codex_discovery "The Established Form" "The last twenty settled above twenty-five."
+        any=1
     fi
 
     # The High Standard — rolling average of last 20 >= 50
-    if ! codex_discovered "HIGH_STANDARD"; then
-        if awk "BEGIN{exit !($_rolling_avg >= 50)}"; then
-            record_codex "HIGH_STANDARD" "$today"
-            print_codex_discovery "The High Standard" "The last twenty held at fifty."
-            any=1
-        fi
+    if ! codex_discovered "HIGH_STANDARD" && (( _avg_q50 )); then
+        record_codex "HIGH_STANDARD" "$today"
+        print_codex_discovery "The High Standard" "The last twenty held at fifty."
+        any=1
     fi
 
     # The Immaculate — rolling average of last 20 >= 100
-    if ! codex_discovered "IMMACULATE"; then
-        if awk "BEGIN{exit !($_rolling_avg >= 100)}"; then
-            record_codex "IMMACULATE" "$today"
-            print_codex_discovery "The Immaculate" "The last twenty held at one hundred."
-            any=1
-        fi
+    if ! codex_discovered "IMMACULATE" && (( _avg_q100 )); then
+        record_codex "IMMACULATE" "$today"
+        print_codex_discovery "The Immaculate" "The last twenty held at one hundred."
+        any=1
     fi
 
     # The First Tally — 1,000 total catches across all trials
