@@ -306,6 +306,66 @@ print_grade() {
     echo ""
 }
 
+# ── The Witness ────────────────────────────────────────────────────────────────
+
+witness_speak() {
+    local trigger=$1
+    local lines=()
+    local threshold=0
+
+    case "$trigger" in
+        breakthrough)
+            lines=(
+                "There it is."
+                "It was always there."
+                "Further."
+                "The ceiling becomes the floor."
+                "New ground."
+            )
+            threshold=40
+            ;;
+        near_miss)
+            lines=(
+                "The wall holds."
+                "One catch short. The record endures."
+                "You can see it from here."
+                "It knows you're coming."
+                "So close it has its own name."
+            )
+            threshold=55
+            ;;
+        failure)
+            lines=(
+                "You keep returning to the same stone."
+                "The pattern is clear."
+                "This is the shape of the struggle."
+                "Noted."
+                "It will pass. Or it will not."
+            )
+            threshold=40
+            ;;
+        bad)
+            lines=(
+                "The body was elsewhere today."
+                "Even this is recorded."
+                "The floor has a floor."
+                "Some days are inventory."
+                "It happens. It is noted."
+            )
+            threshold=35
+            ;;
+    esac
+
+    local roll=$(( RANDOM % 100 ))
+    if (( roll < threshold && ${#lines[@]} > 0 )); then
+        local idx=$(( RANDOM % ${#lines[@]} ))
+        echo ""
+        echo -e "  ${DIM}${lines[$idx]}${RESET}"
+        echo -e "  ${DIM}— The Witness${RESET}"
+        echo ""
+    fi
+}
+
 # ── Log a trial & produce The Dispatch ────────────────────────────────────────
 
 log_score() {
@@ -411,6 +471,26 @@ log_score() {
         _aug_line=$(printf '%s  ·  ' "${_aug_parts[@]}")
         echo -e "  ${DIM}${_aug_line%  ·  }${RESET}"
         echo ""
+    fi
+
+    # ── The Witness ────────────────────────────────────────────────────────────
+    local witness_avg=0
+    if (( total >= 10 )); then
+        witness_avg=$(awk -F',' 'BEGIN{s=0;n=0}{s+=$3+0;n++}END{if(n>0)printf "%.0f",s/n;else print 0}' "$DATA_FILE")
+    fi
+
+    if (( catches > pb )); then
+        witness_speak "breakthrough"
+    elif (( pb >= 3 && ( catches == pb - 1 || catches == pb - 2 ) )); then
+        witness_speak "near_miss"
+    elif (( total >= 10 && witness_avg > 0 )); then
+        local _fail_run
+        _fail_run=$(tail -n5 "$DATA_FILE" | awk -F',' -v avg="$witness_avg" 'BEGIN{n=0}{if($3+0<avg+0)n++}END{print n+0}')
+        if (( _fail_run >= 5 )); then
+            witness_speak "failure"
+        elif (( total >= 20 && catches * 2 <= witness_avg )); then
+            witness_speak "bad"
+        fi
     fi
 }
 
@@ -2333,6 +2413,15 @@ show_lore() {
     echo -e "  The score below your Apex that you have hit most often."
     echo -e "  Shown in ${BOLD}juggle stats${RESET} when a score has appeared at least twice."
     echo -e "  ${DIM}The wall you keep running into.${RESET}"
+
+    # ── The Witness ───────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}THE WITNESS${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  An occasional presence in The Dispatch. He speaks rarely,"
+    echo -e "  and only when something is worth remarking on. His tone"
+    echo -e "  is terse. He does not encourage."
 
     # ── The Codex ─────────────────────────────────────────────────────────────
     echo ""
