@@ -492,10 +492,66 @@ check_codex() {
     local catches=$1 total=$2 today=$3 pb=$4
     local any=0
 
-    # The Faithful — 100 total trials
-    if ! codex_discovered "FAITHFUL" && (( total >= 100 )); then
-        record_codex "FAITHFUL" "$today"
-        print_codex_discovery "The Faithful" "One hundred trials recorded."
+    # The Fifth Entry — 5 total trials
+    if ! codex_discovered "FIFTH_ENTRY" && (( total >= 5 )); then
+        record_codex "FIFTH_ENTRY" "$today"
+        print_codex_discovery "The Fifth Entry" "Five trials recorded."
+        any=1
+    fi
+
+    # The Tenth Inscription — 10 total trials
+    if ! codex_discovered "TENTH_INSCRIPTION" && (( total >= 10 )); then
+        record_codex "TENTH_INSCRIPTION" "$today"
+        print_codex_discovery "The Tenth Inscription" "Ten trials recorded."
+        any=1
+    fi
+
+    # The Path Begins — 25 total trials
+    if ! codex_discovered "PATH_BEGINS" && (( total >= 25 )); then
+        record_codex "PATH_BEGINS" "$today"
+        print_codex_discovery "The Path Begins" "Twenty-five trials recorded."
+        any=1
+    fi
+
+    # The Habit Forms — 50 total trials
+    if ! codex_discovered "HABIT_FORMS" && (( total >= 50 )); then
+        record_codex "HABIT_FORMS" "$today"
+        print_codex_discovery "The Habit Forms" "Fifty trials recorded."
+        any=1
+    fi
+
+    # The Weight of Repetition — 100 total trials
+    if ! codex_discovered "WEIGHT_OF_REPETITION" && (( total >= 100 )); then
+        record_codex "WEIGHT_OF_REPETITION" "$today"
+        print_codex_discovery "The Weight of Repetition" "One hundred trials recorded."
+        any=1
+    fi
+
+    # The Deepening — 500 total trials
+    if ! codex_discovered "DEEPENING" && (( total >= 500 )); then
+        record_codex "DEEPENING" "$today"
+        print_codex_discovery "The Deepening" "Five hundred trials recorded."
+        any=1
+    fi
+
+    # The Thousand Inscribed — 1000 total trials
+    if ! codex_discovered "THOUSAND_INSCRIBED" && (( total >= 1000 )); then
+        record_codex "THOUSAND_INSCRIBED" "$today"
+        print_codex_discovery "The Thousand Inscribed" "One thousand trials recorded."
+        any=1
+    fi
+
+    # The Uncounted Hours — 2000 total trials
+    if ! codex_discovered "UNCOUNTED_HOURS" && (( total >= 2000 )); then
+        record_codex "UNCOUNTED_HOURS" "$today"
+        print_codex_discovery "The Uncounted Hours" "Two thousand trials recorded."
+        any=1
+    fi
+
+    # The Endless Ledger — 5000 total trials
+    if ! codex_discovered "ENDLESS_LEDGER" && (( total >= 5000 )); then
+        record_codex "ENDLESS_LEDGER" "$today"
+        print_codex_discovery "The Endless Ledger" "Five thousand trials recorded."
         any=1
     fi
 
@@ -623,15 +679,27 @@ check_codex() {
 }
 
 show_codex() {
-    local keys=( FAITHFUL STILL_HAND ASCENT ECHO_CHAMBER
+    local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
+                 WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
+                 STILL_HAND ASCENT ECHO_CHAMBER
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
                  BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD )
-    local names=( "The Faithful" "The Still Hand" "The Ascent" "The Echo Chamber"
+    local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
+                  "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
+                  "The Still Hand" "The Ascent" "The Echo Chamber"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
                   "The Breaking of Limits" "The High Current" "The Thousandfold Trial" )
-    local descs=( "One hundred trials recorded."
+    local descs=( "Five trials recorded."
+                  "Ten trials recorded."
+                  "Twenty-five trials recorded."
+                  "Fifty trials recorded."
+                  "One hundred trials recorded."
+                  "Five hundred trials recorded."
+                  "One thousand trials recorded."
+                  "Two thousand trials recorded."
+                  "Five thousand trials recorded."
                   "The same score recorded three or more times."
                   "Five Apex records set."
                   "Your Apex matched three or more times."
@@ -660,8 +728,8 @@ show_codex() {
         if codex_discovered "$key"; then
             local entry_date
             entry_date=$(grep "^${key}," "$CODEX_FILE" | cut -d',' -f2)
-            echo -e "  ${YELLOW}${BOLD}${names[$i]}${RESET}"
-            echo -e "  ${DIM}${descs[$i]}  ·  ${entry_date}${RESET}"
+            printf "  ${YELLOW}${BOLD}%-26s${RESET}  ${DIM}·  %s${RESET}\n" "${names[$i]}" "$entry_date"
+            echo -e "    ${DIM}${descs[$i]}${RESET}"
         else
             echo -e "  ${DIM}??? — undiscovered${RESET}"
         fi
@@ -1303,6 +1371,11 @@ show_stats() {
     echo -e "  ${BOLD}${CYAN}IVGVLATOR — THE RECKONING${RESET}  ${DIM}(3-ball)${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Apex          :${RESET}  ${YELLOW}${BOLD}${pb} catches${RESET}"
+    if (( days_since_pb == 0 )); then
+        echo -e "  ${BOLD}Apex age      :${RESET}  ${DIM}set today${RESET}"
+    else
+        echo -e "  ${BOLD}Apex age      :${RESET}  ${days_since_pb} day(s)  ${DIM}(set ${pb_date})${RESET}"
+    fi
     local stats_rank
     stats_rank=$(get_rank "$pb")
     echo -e "  ${BOLD}Title         :${RESET}  ${stats_rank}"
@@ -1317,11 +1390,6 @@ show_stats() {
     stats_grade="${stats_grade_info%%|*}"
     stats_grade_colour="${stats_grade_info##*|}"
     echo -e "  ${BOLD}Last grade    :${RESET}  ${stats_grade_colour}${stats_grade}${RESET}"
-    if (( days_since_pb == 0 )); then
-        echo -e "  ${BOLD}Days since    :${RESET}  ${DIM}set today${RESET}"
-    else
-        echo -e "  ${BOLD}Days since    :${RESET}  ${days_since_pb} day(s)  ${DIM}(set ${pb_date})${RESET}"
-    fi
     echo -e "  ${BOLD}Trials        :${RESET}  ${total}"
     echo -e "  ${BOLD}Average       :${RESET}  ${avg} catches"
     echo -e "  ${BOLD}Total catches :${RESET}  ${sum}"
