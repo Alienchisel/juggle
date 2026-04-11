@@ -71,6 +71,7 @@ Rolling average of the last 20 trials. Fires once on first qualifying trial; req
 | CLIMB_WITHOUT_FALL | The Climb Without Fall | 5 consecutive trials each strictly higher than the last | |
 | THIRTY | The Thirty | Active Chain ≥ 30 days | Fires while chain is live; no historical backfill |
 | ANNUM | The Annum | Active Chain ≥ 365 days | Fires while chain is live; no historical backfill |
+| FOUR_WATCHES | The Four Watches | 250+ trials each in dawn (05–08), meridian (11–14), dusk (18–20), and vigil (21–03) | Scans full scores.csv on every trial until discovered |
 | ASCENT | The Ascent | 5+ entries in pb_history (5 Apex records set) | |
 | ECHO_CHAMBER | The Echo Chamber | Current Apex matched 3+ times since it was set | Resets if Apex broken |
 | RESONANCE | The Resonance | Current Apex matched on 5+ separate calendar days | Resets if Apex broken |

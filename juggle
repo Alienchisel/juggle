@@ -757,6 +757,26 @@ check_milestones() {
         any=1
     fi
 
+    # The Four Watches — 250+ trials in each time window: dawn, meridian, dusk, vigil
+    if ! codex_discovered "FOUR_WATCHES"; then
+        local _watches_met
+        _watches_met=$(awk -F',' '{
+            split($2, t, ":");
+            h = t[1] + 0;
+            if (h >= 5  && h <= 8)  dawn++;
+            if (h >= 11 && h <= 14) meridian++;
+            if (h >= 18 && h <= 20) dusk++;
+            if (h >= 21 || h <= 3)  vigil++;
+        } END {
+            print (dawn >= 250 && meridian >= 250 && dusk >= 250 && vigil >= 250) ? 1 : 0
+        }' "$SCORES_FILE")
+        if (( _watches_met )); then
+            record_codex "FOUR_WATCHES" "$today"
+            print_codex_discovery "The Four Watches" "Dawn, meridian, dusk, and vigil — each observed two hundred and fifty times."
+            any=1
+        fi
+    fi
+
     # The Onslaught — Spree and Dominance both active simultaneously
     if ! codex_discovered "ONSLAUGHT"; then
         if (( spree_count >= 3 && dominance_active )); then
@@ -1339,7 +1359,7 @@ check_codex() {
     if ! codex_discovered "OMNIA"; then
         local _disc_omnia
         _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        local _omnia_total=57
+        local _omnia_total=58
         if (( _disc_omnia >= _omnia_total - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
@@ -1355,7 +1375,7 @@ show_codex() {
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  FIRST_TALLY MYRIAD LEGION
                  ESTABLISHED_FORM HIGH_STANDARD IMMACULATE
-                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
+                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
@@ -1367,7 +1387,7 @@ show_codex() {
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The First Tally" "The Myriad" "The Legion"
                   "The Established Form" "The High Standard" "The Immaculate"
-                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
+                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Four Watches" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent" "The Usurper"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
@@ -1396,6 +1416,7 @@ show_codex() {
                   "Five consecutive, each one higher."
                   "The chain held for thirty days."
                   "A year without breaking."
+                  "Dawn, meridian, dusk, and vigil — each observed two hundred and fifty times."
                   "The ceiling was raised five times."
                   "The Apex was met again and again."
                   "The Apex reached on five separate days."
