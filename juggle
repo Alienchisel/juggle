@@ -1389,11 +1389,11 @@ show_stats() {
     stats_grade_info=$(get_grade "$last_catches" "$pb")
     stats_grade="${stats_grade_info%%|*}"
     stats_grade_colour="${stats_grade_info##*|}"
+    echo -e "  ${BOLD}Last trial    :${RESET}  ${last_catches} catches  ${DIM}(${last_date} ${last_time})${RESET}"
     echo -e "  ${BOLD}Last grade    :${RESET}  ${stats_grade_colour}${stats_grade}${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${total}"
     echo -e "  ${BOLD}Average       :${RESET}  ${avg} catches"
     echo -e "  ${BOLD}Total catches :${RESET}  ${sum}"
-    echo -e "  ${BOLD}Last trial    :${RESET}  ${last_catches} catches  ${DIM}(${last_date} ${last_time})${RESET}"
     echo ""
     echo -e "  ${BOLD}This month    :${RESET}  ${month_sessions} trial(s), avg ${month_avg}  ${DIM}(all-time avg: ${avg})${RESET}"
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month}  ${DIM}(avg ${best_month_avg})${RESET}"
