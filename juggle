@@ -769,7 +769,7 @@ check_milestones() {
             if (h >= 21 || h <= 3)  vigil++;
         } END {
             print (dawn >= 250 && meridian >= 250 && dusk >= 250 && vigil >= 250) ? 1 : 0
-        }' "$SCORES_FILE")
+        }' "$DATA_FILE")
         if (( _watches_met )); then
             record_codex "FOUR_WATCHES" "$today"
             print_codex_discovery "The Four Watches" "Dawn, meridian, dusk, and vigil — each observed two hundred and fifty times."
@@ -1311,7 +1311,7 @@ check_codex() {
     # Rolling average entries — last 20 trials
     # All three thresholds computed in a single awk pass to avoid awk BEGIN stdin hang
     local _avg_q25 _avg_q50 _avg_q100
-    read -r _avg_q25 _avg_q50 _avg_q100 <<< "$(tail -20 "$SCORES_FILE" | awk -F',' \
+    read -r _avg_q25 _avg_q50 _avg_q100 <<< "$(tail -20 "$DATA_FILE" | awk -F',' \
         '{s+=$3; n++} END{avg=(n>=20 ? s/n : 0); print (avg>=25)?1:0, (avg>=50)?1:0, (avg>=100)?1:0}')"
 
     # The Established Form — rolling average of last 20 >= 25
@@ -1337,10 +1337,10 @@ check_codex() {
 
     # The First Tally — 1,000 total catches across all trials
     if ! codex_discovered "FIRST_TALLY"; then
-        local _total_catches
-        _total_catches=$(awk -F',' '{s+=$3} END{print s+0}' "$SCORES_FILE")
-        if (( _total_catches >= 1000 )); then
-            record_codex "FIRST_TALLY" "$today"
+        local _tally_date
+        _tally_date=$(awk -F',' '{s+=$3; if(s>=1000 && !f){print $1; f=1; exit}}' "$DATA_FILE")
+        if [[ -n "$_tally_date" ]]; then
+            record_codex "FIRST_TALLY" "$_tally_date"
             print_codex_discovery "The First Tally" "One thousand catches in total."
             any=1
         fi
@@ -1348,10 +1348,10 @@ check_codex() {
 
     # The Myriad — 10,000 total catches across all trials
     if ! codex_discovered "MYRIAD"; then
-        local _total_catches_m
-        _total_catches_m=$(awk -F',' '{s+=$3} END{print s+0}' "$SCORES_FILE")
-        if (( _total_catches_m >= 10000 )); then
-            record_codex "MYRIAD" "$today"
+        local _myriad_date
+        _myriad_date=$(awk -F',' '{s+=$3; if(s>=10000 && !f){print $1; f=1; exit}}' "$DATA_FILE")
+        if [[ -n "$_myriad_date" ]]; then
+            record_codex "MYRIAD" "$_myriad_date"
             print_codex_discovery "The Myriad" "Ten thousand catches in total."
             any=1
         fi
@@ -1359,10 +1359,10 @@ check_codex() {
 
     # The Legion — 100,000 total catches across all trials
     if ! codex_discovered "LEGION"; then
-        local _total_catches_l
-        _total_catches_l=$(awk -F',' '{s+=$3} END{print s+0}' "$SCORES_FILE")
-        if (( _total_catches_l >= 100000 )); then
-            record_codex "LEGION" "$today"
+        local _legion_date
+        _legion_date=$(awk -F',' '{s+=$3; if(s>=100000 && !f){print $1; f=1; exit}}' "$DATA_FILE")
+        if [[ -n "$_legion_date" ]]; then
+            record_codex "LEGION" "$_legion_date"
             print_codex_discovery "The Legion" "One hundred thousand catches in total."
             any=1
         fi
