@@ -742,7 +742,7 @@ show_codex() {
             printf "  ${YELLOW}${BOLD}%-26s${RESET}  ${DIM}·  %s${RESET}\n" "${names[$i]}" "$entry_date"
             echo -e "    ${DIM}${descs[$i]}${RESET}"
         else
-            echo -e "  ${DIM}??? — undiscovered${RESET}"
+            printf "  ${DIM}%-26s  ·  undiscovered${RESET}\n" "???"
         fi
         echo ""
     done
