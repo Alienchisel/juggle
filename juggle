@@ -1300,7 +1300,7 @@ show_codex() {
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
-                  "The Congregation" "The Witnessed Ascent"
+                  "The Congregation" "The Witnessed Ascent" "The Usurper"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
