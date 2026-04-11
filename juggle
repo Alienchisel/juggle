@@ -499,24 +499,6 @@ check_codex() {
         any=1
     fi
 
-    # The Ascent — 5+ Apex records
-    local apex_count
-    apex_count=$(wc -l < "$PB_FILE" 2>/dev/null || echo 0)
-    apex_count="${apex_count// /}"
-    if ! codex_discovered "ASCENT" && (( apex_count >= 5 )); then
-        record_codex "ASCENT" "$today"
-        print_codex_discovery "The Ascent" "Five Apex records set."
-        any=1
-    fi
-
-    # The Golden Span — 150 catches in a single trial
-    if ! codex_discovered "GOLDEN_SPAN" && (( catches >= 150 )); then
-        record_codex "GOLDEN_SPAN" "$today"
-        print_codex_discovery "The Golden Span" \
-            "One hundred and fifty catches in a single trial."
-        any=1
-    fi
-
     # The Still Hand — same score 3+ times
     local rep_count
     rep_count=$(awk -F',' -v c="$catches" '$3==c{n++} END{print n+0}' "$DATA_FILE")
@@ -524,6 +506,16 @@ check_codex() {
         record_codex "STILL_HAND" "$today"
         print_codex_discovery "The Still Hand" \
             "The same score recorded three or more times."
+        any=1
+    fi
+
+    # The Ascent — 5+ Apex records
+    local apex_count
+    apex_count=$(wc -l < "$PB_FILE" 2>/dev/null || echo 0)
+    apex_count="${apex_count// /}"
+    if ! codex_discovered "ASCENT" && (( apex_count >= 5 )); then
+        record_codex "ASCENT" "$today"
+        print_codex_discovery "The Ascent" "Five Apex records set."
         any=1
     fi
 
@@ -539,17 +531,121 @@ check_codex() {
         fi
     fi
 
+    # The Gathering Form — 10 catches in a single trial
+    if ! codex_discovered "GATHERING_FORM" && (( catches >= 10 )); then
+        record_codex "GATHERING_FORM" "$today"
+        print_codex_discovery "The Gathering Form" \
+            "Ten catches in a single trial."
+        any=1
+    fi
+
+    # The Steady Hand — 25 catches in a single trial
+    if ! codex_discovered "STEADY_HAND" && (( catches >= 25 )); then
+        record_codex "STEADY_HAND" "$today"
+        print_codex_discovery "The Steady Hand" \
+            "Twenty-five catches in a single trial."
+        any=1
+    fi
+
+    # The Turning Point — 50 catches in a single trial
+    if ! codex_discovered "TURNING_POINT" && (( catches >= 50 )); then
+        record_codex "TURNING_POINT" "$today"
+        print_codex_discovery "The Turning Point" \
+            "Fifty catches in a single trial."
+        any=1
+    fi
+
+    # The Triple Crown — 100 catches in a single trial
+    if ! codex_discovered "TRIPLE_CROWN" && (( catches >= 100 )); then
+        record_codex "TRIPLE_CROWN" "$today"
+        print_codex_discovery "The Triple Crown" \
+            "One hundred catches in a single trial."
+        any=1
+    fi
+
+    # The Golden Span — 150 catches in a single trial
+    if ! codex_discovered "GOLDEN_SPAN" && (( catches >= 150 )); then
+        record_codex "GOLDEN_SPAN" "$today"
+        print_codex_discovery "The Golden Span" \
+            "One hundred and fifty catches in a single trial."
+        any=1
+    fi
+
+    # The Second Breath — 200 catches in a single trial
+    if ! codex_discovered "SECOND_BREATH" && (( catches >= 200 )); then
+        record_codex "SECOND_BREATH" "$today"
+        print_codex_discovery "The Second Breath" \
+            "Two hundred catches in a single trial."
+        any=1
+    fi
+
+    # The Relentless Arc — 300 catches in a single trial
+    if ! codex_discovered "RELENTLESS_ARC" && (( catches >= 300 )); then
+        record_codex "RELENTLESS_ARC" "$today"
+        print_codex_discovery "The Relentless Arc" \
+            "Three hundred catches in a single trial."
+        any=1
+    fi
+
+    # The Colossus Rises — 400 catches in a single trial
+    if ! codex_discovered "COLOSSUS_RISES" && (( catches >= 400 )); then
+        record_codex "COLOSSUS_RISES" "$today"
+        print_codex_discovery "The Colossus Rises" \
+            "Four hundred catches in a single trial."
+        any=1
+    fi
+
+    # The Breaking of Limits — 500 catches in a single trial
+    if ! codex_discovered "BREAKING_LIMITS" && (( catches >= 500 )); then
+        record_codex "BREAKING_LIMITS" "$today"
+        print_codex_discovery "The Breaking of Limits" \
+            "Five hundred catches in a single trial."
+        any=1
+    fi
+
+    # The High Current — 750 catches in a single trial
+    if ! codex_discovered "HIGH_CURRENT" && (( catches >= 750 )); then
+        record_codex "HIGH_CURRENT" "$today"
+        print_codex_discovery "The High Current" \
+            "Seven hundred and fifty catches in a single trial."
+        any=1
+    fi
+
+    # The Thousandfold Trial — 1000 catches in a single trial
+    if ! codex_discovered "THOUSANDFOLD" && (( catches >= 1000 )); then
+        record_codex "THOUSANDFOLD" "$today"
+        print_codex_discovery "The Thousandfold Trial" \
+            "One thousand catches in a single trial."
+        any=1
+    fi
+
     (( any )) && echo ""
 }
 
 show_codex() {
-    local keys=( FAITHFUL STILL_HAND ASCENT ECHO_CHAMBER GOLDEN_SPAN )
-    local names=( "The Faithful" "The Still Hand" "The Ascent" "The Echo Chamber" "The Golden Span" )
+    local keys=( FAITHFUL STILL_HAND ASCENT ECHO_CHAMBER
+                 GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
+                 GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
+                 BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD )
+    local names=( "The Faithful" "The Still Hand" "The Ascent" "The Echo Chamber"
+                  "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
+                  "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
+                  "The Breaking of Limits" "The High Current" "The Thousandfold Trial" )
     local descs=( "One hundred trials recorded."
                   "The same score recorded three or more times."
                   "Five Apex records set."
                   "Your Apex matched three or more times."
-                  "One hundred and fifty catches in a single trial." )
+                  "Ten catches in a single trial."
+                  "Twenty-five catches in a single trial."
+                  "Fifty catches in a single trial."
+                  "One hundred catches in a single trial."
+                  "One hundred and fifty catches in a single trial."
+                  "Two hundred catches in a single trial."
+                  "Three hundred catches in a single trial."
+                  "Four hundred catches in a single trial."
+                  "Five hundred catches in a single trial."
+                  "Seven hundred and fifty catches in a single trial."
+                  "One thousand catches in a single trial." )
 
     local discovered=0 total=${#keys[@]}
     for key in "${keys[@]}"; do codex_discovered "$key" && (( discovered++ )); done
