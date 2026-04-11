@@ -42,7 +42,8 @@ STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_ac
 CODEX_FILE="$DATA_DIR/codex.csv"          # persistent discoveries: key,date
 WITNESS_FILE="$DATA_DIR/witness_count"    # number of times The Witness has spoken
 NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
-TITLE_STATE_FILE="$DATA_DIR/title_state" # 1 if previous trial crossed a title threshold
+TITLE_STATE_FILE="$DATA_DIR/title_state"       # 1 if previous trial crossed a title threshold
+DOMINANCE_STREAK_FILE="$DATA_DIR/dominance_streak" # consecutive trials Dominance has been active
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -66,6 +67,7 @@ init_data() {
     [[ ! -f "$WITNESS_FILE" ]] && echo "0" > "$WITNESS_FILE"
     [[ ! -f "$NEMESIS_FILE" ]] && echo "0,0" > "$NEMESIS_FILE"
     [[ ! -f "$TITLE_STATE_FILE" ]] && echo "0" > "$TITLE_STATE_FILE"
+    [[ ! -f "$DOMINANCE_STREAK_FILE" ]] && echo "0" > "$DOMINANCE_STREAK_FILE"
 
     # Migrate scores.csv from date,catches → date,time,catches
     local score_fields
@@ -743,6 +745,16 @@ check_milestones() {
     # Save updated state
     echo "${streak_peak},${spree_count},${dominance_active},${spree_peak},${echo_peak}" > "$STREAK_FILE"
 
+    # Dominance streak
+    local dom_streak
+    dom_streak=$(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo 0)
+    if (( dominance_active )); then
+        (( dom_streak++ ))
+    else
+        dom_streak=0
+    fi
+    echo "$dom_streak" > "$DOMINANCE_STREAK_FILE"
+
     # The Thirty — 30-day chain
     if ! codex_discovered "THIRTY" && (( cur_streak >= 30 )); then
         record_codex "THIRTY" "$today"
@@ -793,6 +805,13 @@ check_milestones() {
             print_codex_discovery "The Inexorable" "Twenty-five worthy trials, unbroken."
             any=1
         fi
+    fi
+
+    # The Unrelenting — Dominance active for 10 consecutive trials
+    if ! codex_discovered "UNRELENTING" && (( dom_streak >= 10 )); then
+        record_codex "UNRELENTING" "$today"
+        print_codex_discovery "The Unrelenting" "Dominance held across ten consecutive trials."
+        any=1
     fi
 
     # The Onslaught — Spree and Dominance both active simultaneously
@@ -1384,7 +1403,7 @@ check_codex() {
     if ! codex_discovered "OMNIA"; then
         local _disc_omnia
         _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        local _omnia_total=61
+        local _omnia_total=62
         if (( _disc_omnia >= _omnia_total - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
@@ -1400,7 +1419,7 @@ show_codex() {
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  FIRST_TALLY MYRIAD LEGION
                  ESTABLISHED_FORM HIGH_STANDARD IMMACULATE
-                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED FIRST_NAME ASSUMPTION NOTED SUSTAINED INEXORABLE ONSLAUGHT FULL_AUGURY
+                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED FIRST_NAME ASSUMPTION NOTED SUSTAINED INEXORABLE UNRELENTING ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
@@ -1412,7 +1431,7 @@ show_codex() {
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The First Tally" "The Myriad" "The Legion"
                   "The Established Form" "The High Standard" "The Immaculate"
-                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Four Watches" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The First Name" "The Assumption" "The Noted" "The Sustained" "The Inexorable" "The Onslaught" "The Full Augury"
+                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Four Watches" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The First Name" "The Assumption" "The Noted" "The Sustained" "The Inexorable" "The Unrelenting" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent" "The Usurper"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
@@ -1452,6 +1471,7 @@ show_codex() {
                   "The Witness had spoken thirty times."
                   "Ten worthy trials, unbroken."
                   "Twenty-five worthy trials, unbroken."
+                  "Dominance held across ten consecutive trials."
                   "Spree and dominance, both at once."
                   "All auguries aligned at the same moment."
                   "The Witness spoke. The assembly was present."

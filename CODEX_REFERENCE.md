@@ -82,6 +82,7 @@ Rolling average of the last 20 trials. Fires once on first qualifying trial; req
 | NOTED | The Noted | The Witness has spoken 30 times | Counter starts from witness_count creation; no historical backfill |
 | SUSTAINED | The Sustained | Spree of 10+ consecutive worthy trials | |
 | INEXORABLE | The Inexorable | Spree of 25+ consecutive worthy trials | |
+| UNRELENTING | The Unrelenting | Dominance active for 10 consecutive trials | Tracked via dominance_streak state file; no historical backfill |
 | ONSLAUGHT | The Onslaught | Spree (3+ consecutive worthy trials) and Dominance (5 of last 10 ≥ 80% Apex) both active simultaneously | |
 | FULL_AUGURY | The Full Augury | Chain, Spree, Dominance, and Echo all active simultaneously | Update condition if new auguries are added |
 
@@ -144,6 +145,7 @@ Files that must exist for certain entries to function:
 | `witness_count` | Tracks total Witness appearances for NOTED | 0 |
 | `nemesis_state` | Tracks current Nemesis score and count for USURPER | 0,0 |
 | `title_state` | Tracks whether a title was crossed last trial for ASSUMPTION | 0 |
+| `dominance_streak` | Tracks consecutive trials Dominance has been active for UNRELENTING | 0 |
 
 All created automatically by `init_data` if absent.
 
