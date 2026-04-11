@@ -1571,6 +1571,10 @@ show_stats() {
     local this_week_sessions
     this_week_sessions=$(awk -F',' -v ws="$week_start" '$1 >= ws' "$DATA_FILE" | wc -l | tr -d ' ')
 
+    local best_this_week best_this_month
+    best_this_week=$(awk -F',' -v ws="$week_start" '$1 >= ws {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
+    best_this_month=$(awk -F',' -v m="$this_month" '$1 ~ m {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
+
     # Streaks
     local cur_streak best_streak
     read -r cur_streak best_streak <<< "$(calc_streaks)"
@@ -1693,9 +1697,9 @@ show_stats() {
     echo -e "  ${BOLD}Average       :${RESET}  ${avg} catches  ${DIM}(median: ${median})${RESET}"
     echo -e "  ${BOLD}Total catches :${RESET}  ${sum}"
     echo ""
-    echo -e "  ${BOLD}This month    :${RESET}  ${month_sessions} trial(s), avg ${month_avg}  ${DIM}(all-time avg: ${avg})${RESET}"
+    echo -e "  ${BOLD}This month    :${RESET}  ${month_sessions} trial(s), avg ${month_avg}  ${DIM}(best: ${best_this_month})  (all-time avg: ${avg})${RESET}"
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month}  ${DIM}(avg ${best_month_avg})${RESET}"
-    echo -e "  ${BOLD}Trials/week   :${RESET}  ${sessions_per_week} avg  ${DIM}(this week: ${this_week_sessions})${RESET}"
+    echo -e "  ${BOLD}Trials/week   :${RESET}  ${sessions_per_week} avg  ${DIM}(this week: ${this_week_sessions}, best: ${best_this_week})${RESET}"
     echo ""
     echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(10th percentile, last 20 trials)${RESET}"
     echo -e "  ${BOLD}Ceiling       :${RESET}  ${ceiling_val} catches  ${DIM}(90th percentile, last 20 trials)${RESET}"
