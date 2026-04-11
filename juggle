@@ -739,12 +739,10 @@ show_codex() {
         if codex_discovered "$key"; then
             local entry_date
             entry_date=$(grep "^${key}," "$CODEX_FILE" | cut -d',' -f2)
-            printf "  ${YELLOW}${BOLD}%-26s${RESET}  ${DIM}·  %s${RESET}\n" "${names[$i]}" "$entry_date"
+            printf "  ${YELLOW}${BOLD}%-26s${RESET}  ${DIM}—  %s${RESET}\n" "${names[$i]}" "$entry_date"
             echo -e "  ${DIM}${descs[$i]}${RESET}"
-        else
-            printf "  ${DIM}%-26s  ·  —${RESET}\n" "???"
+            echo ""
         fi
-        echo ""
     done
 }
 
