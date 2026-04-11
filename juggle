@@ -598,6 +598,22 @@ check_codex() {
         fi
     fi
 
+    # The Resonance — Apex matched on 5+ separate calendar days
+    if ! codex_discovered "RESONANCE" && (( catches == pb && pb > 0 )); then
+        local apex_date resonance_days
+        apex_date=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
+        resonance_days=$(awk -F',' -v pb="$pb" -v d="$apex_date" '
+            $1 >= d && $3 == pb { dates[$1]=1 }
+            END { print length(dates) }
+        ' "$DATA_FILE")
+        if (( resonance_days >= 5 )); then
+            record_codex "RESONANCE" "$today"
+            print_codex_discovery "The Resonance" \
+                "Your Apex matched across five separate days."
+            any=1
+        fi
+    fi
+
     # The Gathering Form — 10 catches in a single trial
     if ! codex_discovered "GATHERING_FORM" && (( catches >= 10 )); then
         record_codex "GATHERING_FORM" "$today"
@@ -692,13 +708,13 @@ check_codex() {
 show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
-                 STILL_HAND ASCENT ECHO_CHAMBER
+                 STILL_HAND ASCENT ECHO_CHAMBER RESONANCE
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
                  BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
-                  "The Still Hand" "The Ascent" "The Echo Chamber"
+                  "The Still Hand" "The Ascent" "The Echo Chamber" "The Resonance"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
                   "The Breaking of Limits" "The High Current" "The Thousandfold Trial" )
@@ -714,6 +730,7 @@ show_codex() {
                   "The same score recorded three or more times."
                   "Five Apex records set."
                   "Your Apex matched three or more times."
+                  "Your Apex matched across five separate days."
                   "Ten catches in a single trial."
                   "Twenty-five catches in a single trial."
                   "Fifty catches in a single trial."
