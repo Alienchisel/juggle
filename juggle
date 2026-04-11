@@ -527,8 +527,8 @@ log_score() {
     fi
 
     # ── Augury line ────────────────────────────────────────────────────────────
-    local _sp _sc _da
-    IFS=',' read -r _sp _sc _da < "$STREAK_FILE"
+    local _sp _sc _da _spk _epk
+    IFS=',' read -r _sp _sc _da _spk _epk < "$STREAK_FILE"
     local _cur_streak
     read -r _cur_streak _ <<< "$(calc_streaks)"
     local _echo_count
