@@ -42,6 +42,7 @@ STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_ac
 CODEX_FILE="$DATA_DIR/codex.csv"          # persistent discoveries: key,date
 WITNESS_FILE="$DATA_DIR/witness_count"    # number of times The Witness has spoken
 NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
+TITLE_STATE_FILE="$DATA_DIR/title_state" # 1 if previous trial crossed a title threshold
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -64,6 +65,7 @@ init_data() {
     touch "$PB_FILE"
     [[ ! -f "$WITNESS_FILE" ]] && echo "0" > "$WITNESS_FILE"
     [[ ! -f "$NEMESIS_FILE" ]] && echo "0,0" > "$NEMESIS_FILE"
+    [[ ! -f "$TITLE_STATE_FILE" ]] && echo "0" > "$TITLE_STATE_FILE"
 
     # Migrate scores.csv from date,catches → date,time,catches
     local score_fields
@@ -928,6 +930,47 @@ check_codex() {
         fi
     fi
 
+    # The Assumption — ≥80% PB on the trial immediately after a title crossing,
+    # or granted automatically upon reaching Immortal (1000 catches)
+    if ! codex_discovered "ASSUMPTION"; then
+        local _title_thresholds=(5 10 15 20 25 30 40 50 75 100 125 150 175 200 250 300 400 500 750 1000)
+        local _pending=0
+        [[ -f "$TITLE_STATE_FILE" ]] && _pending=$(cat "$TITLE_STATE_FILE")
+
+        # Check if this trial satisfies an open window
+        if (( _pending && pb > 0 && catches * 100 >= pb * 80 )); then
+            record_codex "ASSUMPTION" "$today"
+            print_codex_discovery "The Assumption" \
+                "A new title claimed, and the form held."
+            any=1
+        fi
+
+        # Clear the window regardless
+        (( _pending )) && echo "0" > "$TITLE_STATE_FILE"
+
+        # Detect if THIS trial crossed a title threshold → open window for next trial
+        if (( catches > pb )); then
+            local _old_next=0 _new_next=0
+            for _t in "${_title_thresholds[@]}"; do
+                if (( pb < _t )); then _old_next=$_t; break; fi
+            done
+            for _t in "${_title_thresholds[@]}"; do
+                if (( catches < _t )); then _new_next=$_t; break; fi
+            done
+            if (( _old_next != _new_next )); then
+                echo "1" > "$TITLE_STATE_FILE"
+            fi
+        fi
+
+        # Immortal fallback — granted unconditionally at 1000 catches
+        if ! codex_discovered "ASSUMPTION" && (( catches >= 1000 )); then
+            record_codex "ASSUMPTION" "$today"
+            print_codex_discovery "The Assumption" \
+                "A new title claimed, and the form held."
+            any=1
+        fi
+    fi
+
     # The Correspondence — catches == trial number (historical scan)
     if ! codex_discovered "CORRESPONDENCE"; then
         local corr_result
@@ -1146,7 +1189,7 @@ check_codex() {
 show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
-                 STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED NOTED FULL_AUGURY
+                 STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
@@ -1155,7 +1198,7 @@ show_codex() {
                 ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
-                  "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Noted" "The Full Augury"
+                  "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
@@ -1179,6 +1222,7 @@ show_codex() {
                   "Your Apex matched across five separate days."
                   "Your Apex matched on three consecutive days."
                   "Not one unworthy trial among the last twenty."
+                  "A new title claimed, and the form held."
                   "You have not gone unseen."
                   "Nothing was lacking."
                   "Others were listening."
