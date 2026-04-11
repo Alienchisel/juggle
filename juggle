@@ -328,6 +328,11 @@ witness_speak() {
                 "Further."
                 "The ceiling becomes the floor."
                 "New ground."
+                "That one counted."
+                "The record bends."
+                "Something shifted."
+                "Keep going."
+                "Now it begins again."
             )
             threshold=40
             ;;
@@ -338,6 +343,11 @@ witness_speak() {
                 "You can see it from here."
                 "It knows you're coming."
                 "So close it has its own name."
+                "Almost is its own category."
+                "The gap is narrowing."
+                "Not yet."
+                "The record is aware of you."
+                "A fraction. That is all."
             )
             threshold=55
             ;;
@@ -348,6 +358,11 @@ witness_speak() {
                 "This is the shape of the struggle."
                 "Noted."
                 "It will pass. Or it will not."
+                "The same place again."
+                "This has happened before."
+                "Something is resisting."
+                "The ledger does not forget."
+                "You are not done. That much is clear."
             )
             threshold=40
             ;;
@@ -358,6 +373,11 @@ witness_speak() {
                 "The floor has a floor."
                 "Some days are inventory."
                 "It happens. It is noted."
+                "Not every trial is a trial."
+                "Rest is also data."
+                "The hands were not here."
+                "This one will not be remembered."
+                "Filed."
             )
             threshold=35
             ;;
