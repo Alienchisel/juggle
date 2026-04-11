@@ -254,7 +254,7 @@ print_grade() {
     echo ""
 }
 
-# ── Log a trial ────────────────────────────────────────────────────────────────
+# ── Log a trial & produce The Dispatch ────────────────────────────────────────
 
 log_score() {
     local catches=$1
@@ -291,7 +291,13 @@ log_score() {
         echo -e "  ${YELLOW}${BOLD}A new Apex is set.${RESET}"
         echo -e "  ${GREEN}${BOLD}${catches} catches.${RESET} The old Apex of ${pb} is surpassed."
     elif (( catches == pb && pb > 0 )); then
-        echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} So close to breaking it…"
+        local ec
+        ec=$(echo_count "$pb")
+        if (( ec >= 3 )); then
+            echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} Echoed ${ec} times."
+        else
+            echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} So close to breaking it…"
+        fi
     elif (( pb > 0 && catches >= pb * 80 / 100 )); then
         echo -e "  ${GREEN}A worthy trial.${RESET} ${BOLD}${catches} catches${RESET} — within striking distance of your best (${pb})."
     else
@@ -451,19 +457,6 @@ check_milestones() {
 
     # Save updated state
     echo "${streak_peak},${spree_count},${dominance_active}" > "$STREAK_FILE"
-
-    # ── Echo ──────────────────────────────────────────────────────────────────
-    # Fires once when the current Apex has been matched exactly 3 times.
-    # Keyed to pb value so it re-arms if the Apex is ever broken.
-    if (( catches == pb && pb > 0 )); then
-        local ec
-        ec=$(echo_count "$pb")
-        if (( ec >= 3 )) && ! milestone_fired "echo" "$pb"; then
-            record_milestone "echo" "$pb"
-            print_milestone "${MAGENTA}The Echo stirs. The Apex has been matched ${ec} times.${RESET}"
-            any=1
-        fi
-    fi
 
     if (( any )); then
         echo ""
@@ -1784,6 +1777,16 @@ show_lore() {
     echo -e "  Breaking the Apex earns grade ${YELLOW}${BOLD}SSS${RESET} and the epithet"
     echo -e "  ${BLOOD}${BOLD}Sine pari.${RESET}  ${DIM}Without equal.${RESET}"
 
+    # ── The Dispatch ─────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}THE DISPATCH${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  The output shown immediately after logging a trial."
+    echo -e "  Contains, in order: Apex status, rank in the Annals,"
+    echo -e "  any Omens earned, the block-letter grade, ${BLOOD}${BOLD}Sine pari.${RESET}"
+    echo -e "  if a new Apex was set, and the current Augury line."
+
     # ── Grades ────────────────────────────────────────────────────────────────
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -1847,11 +1850,6 @@ show_lore() {
     echo -e "  ${DIM}5  10  25  50  75  100  150  200  300  400  500${RESET}"
     echo -e "  ${DIM}750  1000  1500  2000  3000  5000${RESET}"
     echo -e "  ${DIM}The message grows heavier as the count climbs.${RESET}"
-    echo ""
-    echo -e "  ${BOLD}Echo omen${RESET}  —  fires when the current Apex has been matched"
-    echo -e "  (not broken — exactly equalled) three or more times."
-    echo -e "  Resets silently if the Apex is surpassed, and may fire"
-    echo -e "  again against the new one."
 
     # ── Auguries ──────────────────────────────────────────────────────────────
     echo ""
@@ -1877,9 +1875,9 @@ show_lore() {
     echo -e "  at the high end, not isolated peaks."
     echo ""
     echo -e "  ${MAGENTA}${BOLD}Echo${RESET}  —  displayed once the current Apex has been matched"
-    echo -e "  3 or more times since it was set. Related to the Echo"
-    echo -e "  Omen but distinct: the Omen fires once at exactly 3"
-    echo -e "  matches; the Augury persists for as long as the count holds."
+    echo -e "  3 or more times since it was set. Persists for as long"
+    echo -e "  as the count holds. Each match also notes the running"
+    echo -e "  count in The Dispatch. Resets if the Apex is broken."
 
     # ── Steadfastness & Zone ──────────────────────────────────────────────────
     echo ""
