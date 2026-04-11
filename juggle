@@ -153,7 +153,7 @@ echo_count() {
     local apex_date
     apex_date=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
     awk -F',' -v pb="$pb" -v d="$apex_date" '
-        $1 >= d && $3 == pb { n++ }
+        $1 >= d && $3 == pb { if (!first) { first=1; next } n++ }
         END { print n+0 }
     ' "$DATA_FILE"
 }
