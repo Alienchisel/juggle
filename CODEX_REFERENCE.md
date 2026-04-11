@@ -44,6 +44,7 @@ Update this file whenever a new entry is added.
 | Key | Name | Condition | Notes |
 |-----|------|-----------|-------|
 | STILL_HAND | The Still Hand | Any score logged 3+ times across all trials | Not necessarily consecutive |
+| SEPTEM | Septem | Same score logged 7 times in a row | Historical scan of full scores.csv |
 | NARROW_PATH | The Narrow Path | Last 20 trials span a range of ≤ 10 catches | Max minus min ≤ 10 |
 | CLIMB_WITHOUT_FALL | The Climb Without Fall | 5 consecutive trials each strictly higher than the last | |
 | ASCENT | The Ascent | 5+ entries in pb_history (5 Apex records set) | |

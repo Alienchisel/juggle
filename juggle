@@ -847,6 +847,28 @@ check_codex() {
         any=1
     fi
 
+    # Septem — same score 7 times in a row (historical scan)
+    if ! codex_discovered "SEPTEM" && (( total >= 7 )); then
+        local septem_result
+        septem_result=$(awk -F',' '
+            {s[NR]=$3+0; d[NR]=$1}
+            END {
+                for (i=7; i<=NR; i++) {
+                    ok=1
+                    for (j=i-6; j<i; j++) if (s[j]!=s[j+1]) { ok=0; break }
+                    if (ok) { print d[i]; exit }
+                }
+            }' "$DATA_FILE")
+        if [[ -n "$septem_result" ]]; then
+            record_codex "SEPTEM" "$septem_result"
+            if [[ "$septem_result" == "$today" ]]; then
+                print_codex_discovery "Septem" \
+                    "Seven of the same, in succession."
+                any=1
+            fi
+        fi
+    fi
+
     # The Narrow Path — last 20 trials within a 10-catch band
     if ! codex_discovered "NARROW_PATH" && (( total >= 20 )); then
         local np_range
@@ -1229,7 +1251,7 @@ check_codex() {
 show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
-                 STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
+                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
@@ -1238,7 +1260,7 @@ show_codex() {
                 ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
-                  "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
+                  "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
@@ -1255,6 +1277,7 @@ show_codex() {
                   "Two thousand trials recorded."
                   "Five thousand trials recorded."
                   "The same score recorded three or more times."
+                  "Seven of the same, in succession."
                   "Twenty trials within a ten-catch band."
                   "Five consecutive trials each improving on the last."
                   "Five Apex records set."
