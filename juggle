@@ -1183,7 +1183,7 @@ check_codex() {
     ' "$DATA_FILE")"
 
     if (( cur_nemesis > 0 && cur_nemesis != prev_nemesis )); then
-        if ! codex_discovered "USURPER" && (( prev_nemesis_count >= 100 && cur_nemesis > prev_nemesis )); then
+        if ! codex_discovered "USURPER" && (( prev_nemesis_count >= 100 && cur_nemesis > prev_nemesis && cur_nemesis_count > prev_nemesis_count )); then
             record_codex "USURPER" "$today"
             print_codex_discovery "The Usurper" "A higher wall has claimed its place."
             any=1
