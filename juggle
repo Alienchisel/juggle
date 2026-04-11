@@ -366,6 +366,78 @@ witness_speak() {
     fi
 }
 
+# ── The Attendants ─────────────────────────────────────────────────────────────
+
+check_attendants() {
+    local total=$1 today=$2
+
+    # Sequential stage checks — each requires the previous
+    local fired=0
+    if ! codex_discovered "ATTENDANT_1" && (( total >= 100 )); then
+        record_codex "ATTENDANT_1" "$today"
+        fired=1
+    elif ! codex_discovered "ATTENDANT_2" && codex_discovered "ATTENDANT_1" && (( total >= 500 )); then
+        record_codex "ATTENDANT_2" "$today"
+        fired=2
+    elif ! codex_discovered "ATTENDANT_3" && codex_discovered "ATTENDANT_2" && (( total >= 1000 )); then
+        record_codex "ATTENDANT_3" "$today"
+        fired=3
+    elif ! codex_discovered "ATTENDANT_4" && codex_discovered "ATTENDANT_3" && (( total >= 2000 )); then
+        record_codex "ATTENDANT_4" "$today"
+        fired=4
+    elif ! codex_discovered "ATTENDANT_5" && codex_discovered "ATTENDANT_4" && (( total >= 5000 )); then
+        record_codex "ATTENDANT_5" "$today"
+        fired=5
+    fi
+
+    # Determine current highest stage
+    local stage=0
+    for s in 1 2 3 4 5; do
+        codex_discovered "ATTENDANT_${s}" && stage=$s
+    done
+    (( stage == 0 )) && return
+
+    # Show on first discovery; otherwise 12% chance
+    local show=0
+    (( fired > 0 )) && show=1
+    (( fired == 0 && RANDOM % 100 < 12 )) && show=1
+    (( show == 0 )) && return
+
+    local lines=()
+    case "$stage" in
+        1) lines=(
+                "Something stands at the edge of the light."
+                "At the periphery, something waits."
+                "A stillness that was not there before."
+            ) ;;
+        2) lines=(
+                "There are more of them now."
+                "The space has changed."
+                "They have not moved. There are simply more."
+            ) ;;
+        3) lines=(
+                "They remain."
+                "The assembly holds."
+                "They have always been here."
+            ) ;;
+        4) lines=(
+                "They are closer than before."
+                "The distance has changed."
+                "They have not moved. And yet."
+            ) ;;
+        5) lines=(
+                "They are part of this now."
+                "You have never been alone here."
+                "The rite continues."
+            ) ;;
+    esac
+
+    local idx=$(( RANDOM % ${#lines[@]} ))
+    echo ""
+    echo -e "  ${DIM}${lines[$idx]}${RESET}"
+    echo ""
+}
+
 # ── Log a trial & produce The Dispatch ────────────────────────────────────────
 
 log_score() {
@@ -472,6 +544,9 @@ log_score() {
         echo -e "  ${DIM}${_aug_line%  ·  }${RESET}"
         echo ""
     fi
+
+    # ── The Attendants ─────────────────────────────────────────────────────────
+    check_attendants "$total" "$today"
 
     # ── The Witness ────────────────────────────────────────────────────────────
     local witness_avg=0
@@ -888,13 +963,15 @@ show_codex() {
                  STILL_HAND NARROW_PATH CLIMB_WITHOUT_FALL ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION
                  GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
                  GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
-                 BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD )
+                 BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD
+                ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The Still Hand" "The Narrow Path" "The Climb Without Fall" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection"
                   "The Gathering Form" "The Steady Hand" "The Turning Point" "The Triple Crown"
                   "The Golden Span" "The Second Breath" "The Relentless Arc" "The Colossus Rises"
-                  "The Breaking of Limits" "The High Current" "The Thousandfold Trial" )
+                  "The Breaking of Limits" "The High Current" "The Thousandfold Trial"
+                  "The First Shadow" "The Gathering" "The Silent Assembly" "The Nearing" "The Established Rite" )
     local descs=( "Five trials recorded."
                   "Ten trials recorded."
                   "Twenty-five trials recorded."
@@ -921,7 +998,12 @@ show_codex() {
                   "Four hundred catches in a single trial."
                   "Five hundred catches in a single trial."
                   "Seven hundred and fifty catches in a single trial."
-                  "One thousand catches in a single trial." )
+                  "One thousand catches in a single trial."
+                  "Something stood at the edge of the light."
+                  "They were not alone."
+                  "The assembly holds."
+                  "The distance has changed."
+                  "They are part of this now." )
 
     local discovered=0 total=${#keys[@]}
     for key in "${keys[@]}"; do codex_discovered "$key" && (( discovered++ )); done
@@ -2422,6 +2504,18 @@ show_lore() {
     echo -e "  An occasional presence in The Dispatch. He speaks rarely,"
     echo -e "  and only when something is worth remarking on. His tone"
     echo -e "  is terse. He does not encourage."
+
+    # ── The Attendants ────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}THE ATTENDANTS${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  Silent presences that accumulate over time. They do not speak."
+    echo -e "  They do not act. They appear in The Dispatch, briefly, without"
+    echo -e "  explanation. Their arrival is marked in The Codex."
+    echo ""
+    echo -e "  Each stage arrives only once, as trial count rises. Later stages"
+    echo -e "  will not surface until earlier ones have been recorded."
 
     # ── The Codex ─────────────────────────────────────────────────────────────
     echo ""
