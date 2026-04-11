@@ -740,9 +740,9 @@ show_codex() {
             local entry_date
             entry_date=$(grep "^${key}," "$CODEX_FILE" | cut -d',' -f2)
             printf "  ${YELLOW}${BOLD}%-26s${RESET}  ${DIM}·  %s${RESET}\n" "${names[$i]}" "$entry_date"
-            echo -e "    ${DIM}${descs[$i]}${RESET}"
+            echo -e "  ${DIM}${descs[$i]}${RESET}"
         else
-            printf "  ${DIM}%-26s  ·  undiscovered${RESET}\n" "???"
+            printf "  ${DIM}%-26s  ·  —${RESET}\n" "???"
         fi
         echo ""
     done
