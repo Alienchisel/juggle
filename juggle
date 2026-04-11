@@ -39,6 +39,7 @@ STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_ac
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
+BLOOD='\033[38;2;139;0;0m'
 YELLOW='\033[1;33m'
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
@@ -329,7 +330,7 @@ log_score() {
     print_grade "$catches" "$display_pb"
 
     if (( catches > pb )); then
-        echo -e "  ${YELLOW}${BOLD}Sine pari.${RESET}"
+        echo -e "  ${BLOOD}${BOLD}Sine pari.${RESET}"
         echo ""
     fi
 
@@ -912,7 +913,7 @@ show_apex() {
         grade="${grade_info%%|*}"
         grade_colour="${grade_info##*|}"
         if (( ph_val == pb )); then
-            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}  ${YELLOW}${BOLD}Sine pari.${RESET}\n" \
+            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}  ${BLOOD}${BOLD}Sine pari.${RESET}\n" \
                 "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
         else
             printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}\n" \
