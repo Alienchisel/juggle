@@ -1259,6 +1259,37 @@ check_codex() {
         echo "${cur_nemesis},${cur_nemesis_count}" > "$NEMESIS_FILE"
     fi
 
+    # Rolling average entries — last 20 trials
+    local _rolling_avg
+    _rolling_avg=$(tail -20 "$SCORES_FILE" | awk -F',' '{s+=$3; n++} END{print (n>=20 ? s/n : 0)}')
+
+    # The Established Form — rolling average of last 20 >= 25
+    if ! codex_discovered "ESTABLISHED_FORM"; then
+        if awk "BEGIN{exit !($_rolling_avg >= 25)}"; then
+            record_codex "ESTABLISHED_FORM" "$today"
+            print_codex_discovery "The Established Form" "The last twenty settled above twenty-five."
+            any=1
+        fi
+    fi
+
+    # The High Standard — rolling average of last 20 >= 50
+    if ! codex_discovered "HIGH_STANDARD"; then
+        if awk "BEGIN{exit !($_rolling_avg >= 50)}"; then
+            record_codex "HIGH_STANDARD" "$today"
+            print_codex_discovery "The High Standard" "The last twenty held at fifty."
+            any=1
+        fi
+    fi
+
+    # The Immaculate — rolling average of last 20 >= 100
+    if ! codex_discovered "IMMACULATE"; then
+        if awk "BEGIN{exit !($_rolling_avg >= 100)}"; then
+            record_codex "IMMACULATE" "$today"
+            print_codex_discovery "The Immaculate" "The last twenty held at one hundred."
+            any=1
+        fi
+    fi
+
     # The First Tally — 1,000 total catches across all trials
     if ! codex_discovered "FIRST_TALLY"; then
         local _total_catches
@@ -1308,7 +1339,7 @@ check_codex() {
     if ! codex_discovered "OMNIA"; then
         local _disc_omnia
         _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        local _omnia_total=54
+        local _omnia_total=57
         if (( _disc_omnia >= _omnia_total - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
@@ -1323,6 +1354,7 @@ show_codex() {
     local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
                  WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
                  FIRST_TALLY MYRIAD LEGION
+                 ESTABLISHED_FORM HIGH_STANDARD IMMACULATE
                  STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED ASSUMPTION NOTED ONSLAUGHT FULL_AUGURY
                  CONGREGATION WITNESSED_ASCENT USURPER
                  CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
@@ -1334,6 +1366,7 @@ show_codex() {
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The First Tally" "The Myriad" "The Legion"
+                  "The Established Form" "The High Standard" "The Immaculate"
                   "The Still Hand" "Septem" "The Narrow Path" "The Climb Without Fall" "The Thirty" "The Annum" "The Ascent" "The Echo Chamber" "The Resonance" "The Unbroken Reflection" "The Unblemished" "The Assumption" "The Noted" "The Onslaught" "The Full Augury"
                   "The Congregation" "The Witnessed Ascent" "The Usurper"
                   "The Correspondence" "The Sequence" "The Mirror" "The Deep Mirror" "The Sieve" "The Ratio"
@@ -1354,6 +1387,9 @@ show_codex() {
                   "One thousand catches, gathered across all trials."
                   "Ten thousand. The myriad was complete."
                   "One hundred thousand caught."
+                  "The last twenty settled above twenty-five."
+                  "The last twenty held at fifty."
+                  "The last twenty held at one hundred."
                   "The same score returned."
                   "Seven of the same, one after another."
                   "Twenty trials within ten of each other."

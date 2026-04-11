@@ -31,6 +31,18 @@ Update this file whenever a new entry is added.
 
 ---
 
+## Rolling Average Milestones
+
+Rolling average of the last 20 trials. Fires once on first qualifying trial; requires 20+ trials logged.
+
+| Key | Name | Condition |
+|-----|------|-----------|
+| ESTABLISHED_FORM | The Established Form | Rolling average of last 20 trials ≥ 25 |
+| HIGH_STANDARD | The High Standard | Rolling average of last 20 trials ≥ 50 |
+| IMMACULATE | The Immaculate | Rolling average of last 20 trials ≥ 100 |
+
+---
+
 ## Catch Milestones
 
 | Key | Name | Condition |
