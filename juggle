@@ -593,6 +593,15 @@ log_score() {
     check_milestones "$catches" "$total" "$today" "$pb"
     check_codex      "$catches" "$total" "$today" "$pb"
 
+    # Nemesis match — fire occasionally (1 in 3) when score equals current Nemesis
+    local _nem_score=0
+    IFS=',' read -r _nem_score _ < "$NEMESIS_FILE" 2>/dev/null
+    if (( _nem_score > 0 && catches == _nem_score && RANDOM % 3 == 0 )); then
+        local _nem_msgs=("This ground again." "The familiar number.")
+        echo -e "  ${DIM}${_nem_msgs[RANDOM % 2]}${RESET}"
+        echo ""
+    fi
+
     print_grade "$catches" "$display_pb"
 
     if (( catches > pb )); then
