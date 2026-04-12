@@ -3030,6 +3030,11 @@ show_last() {
     local pb
     pb=$(personal_best)
     echo ""
+    local _title
+    (( n == 1 )) && _title="RECENT TRIAL" || _title="RECENT TRIALS"
+    echo -e "  ${BOLD}${_title}${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo ""
     local i=1
     while IFS=',' read -r row_date row_time row_catches; do
         local grade_info grade colour
