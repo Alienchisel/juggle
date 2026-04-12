@@ -3409,8 +3409,11 @@ case "$1" in
         undo_last
         ;;
     lore)
-        _lore_tmp=$(mktemp)
-        printf '%s\n' \
+        _pick=$(gum choose \
+            --header "LORE · SYSTEMS — select a section, or Esc to read all" \
+            --header.foreground="8" \
+            --cursor.foreground="1" \
+            --selected.foreground="136" \
             "The Annals" \
             "The Apex" \
             "The Dispatch" \
@@ -3424,14 +3427,7 @@ case "$1" in
             "The Witness" \
             "The Attendants" \
             "The Codex" \
-            | gum filter \
-                --placeholder "Search sections…" \
-                --prompt "> " \
-                --header "LORE · SYSTEMS — select a section, or Esc to read all" \
-                --header.foreground="8" \
-                > "$_lore_tmp" 2>/dev/null
-        _pick=$(cat "$_lore_tmp")
-        rm -f "$_lore_tmp"
+            2>/dev/null)
         if [[ -z "$_pick" ]]; then
             show_lore | gum_pager
         else
