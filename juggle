@@ -1898,11 +1898,14 @@ show_trend() {
         fi
     done
 
-    # ── Time-of-day breakdown ─────────────────────────────────────────────────
+    # ── Time-of-day breakdown (last 12 weeks) ────────────────────────────────
     # Skip entries with placeholder timestamp 00:00:00 (migrated from timeless records)
+    local tod_window_start
+    tod_window_start=$(date -d "$week_start -11 weeks" +%Y-%m-%d)
     local tod_data tod_real_count
-    tod_real_count=$(awk -F',' '$2 != "00:00:00"' "$DATA_FILE" | wc -l | tr -d ' ')
-    tod_data=$(awk -F',' '
+    tod_real_count=$(awk -F',' -v from="$tod_window_start" '$1 >= from && $2 != "00:00:00"' "$DATA_FILE" | wc -l | tr -d ' ')
+    tod_data=$(awk -F',' -v from="$tod_window_start" '
+        $1 < from { next }
         $2 == "00:00:00" { next }
         {
             split($2, t, ":"); h = t[1]+0
@@ -2035,7 +2038,7 @@ show_trend() {
 
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}WHEN YOU TRAIN${RESET}"
+    echo -e "  ${BOLD}WHEN YOU TRAIN${RESET}  ${DIM}(last 12 weeks)${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     if (( tod_real_count == 0 )); then
         echo -e "  ${DIM}No timestamped entries yet.${RESET}"
