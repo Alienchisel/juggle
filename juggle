@@ -3026,9 +3026,7 @@ undo_last() {
     IFS=',' read -r last_date last_time last_catches <<< "$(tail -n1 "$DATA_FILE")"
     echo ""
     echo -e "  ${BOLD}Last entry:${RESET}  ${BOLD}${last_catches} catches${RESET}  ${DIM}(${last_date} ${last_time})${RESET}"
-    echo -e "  ${RED}Remove this entry?${RESET} ${DIM}[y/N]${RESET} "
-    read -r confirm
-    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+    if gum confirm "Remove this entry?"; then
         local tmp
         tmp=$(mktemp)
         head -n -1 "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
