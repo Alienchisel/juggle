@@ -2550,7 +2550,7 @@ show_day() {
         return
     fi
 
-    local target_date
+    local target_date is_current=0
     if [[ -n "$1" ]]; then
         if [[ "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
             target_date="$1"
@@ -2560,6 +2560,7 @@ show_day() {
         fi
     else
         target_date=$(date +%Y-%m-%d)
+        is_current=1
     fi
 
     local day_count day_best day_sum
@@ -2594,6 +2595,28 @@ show_day() {
     echo -e "  ${BOLD}Trials        :${RESET}  ${day_count}"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${day_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${day_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}"
+    if (( is_current )); then
+        local _gloss
+        if awk "BEGIN {exit !($day_avg > $alltime_avg)}"; then
+            if (( day_count >= 3 )); then
+                _gloss="Multiple returns. The day ran above the long line."
+            else
+                _gloss="A day above the long line."
+            fi
+        elif awk "BEGIN {exit !($day_avg < $alltime_avg)}"; then
+            if (( day_count >= 3 )); then
+                _gloss="Multiple returns. The long line was not reached."
+            elif (( day_count == 1 )); then
+                _gloss="A single trial. Below the long line."
+            else
+                _gloss="The day fell below the long line."
+            fi
+        else
+            _gloss="The day held at the long line."
+        fi
+        echo ""
+        echo -e "  ${DIM}${_gloss}${RESET}"
+    fi
     echo ""
 }
 
@@ -2701,7 +2724,7 @@ show_month() {
         return
     fi
 
-    local target_month
+    local target_month is_current=0
     if [[ -n "$1" ]]; then
         if [[ "$1" =~ ^[0-9]{4}-[0-9]{2}$ ]]; then
             target_month="$1"
@@ -2711,6 +2734,7 @@ show_month() {
         fi
     else
         target_month=$(date +%Y-%m)
+        is_current=1
     fi
 
     local m_count m_best m_sum
@@ -2776,6 +2800,29 @@ show_month() {
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of ${days_in_month}"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${m_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${m_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${month_sign}"
+    if (( is_current )); then
+        local _days_elapsed _gloss
+        _days_elapsed=$(date +%-d)
+        if awk "BEGIN {exit !($m_avg > $alltime_avg)}"; then
+            if (( active_days * 3 >= _days_elapsed * 2 )); then
+                _gloss="A consistent month. The long average was exceeded."
+            elif (( active_days * 4 <= _days_elapsed )); then
+                _gloss="Sparse returns — but the average held above the long line."
+            else
+                _gloss="The month ran above the long average."
+            fi
+        elif awk "BEGIN {exit !($m_avg < $alltime_avg)}"; then
+            if (( active_days * 4 <= _days_elapsed )); then
+                _gloss="A sparse month. The long average was not reached."
+            else
+                _gloss="The month fell below the long average."
+            fi
+        else
+            _gloss="The month held at the long average."
+        fi
+        echo ""
+        echo -e "  ${DIM}${_gloss}${RESET}"
+    fi
     echo ""
 }
 
@@ -2789,7 +2836,7 @@ show_year() {
         return
     fi
 
-    local target_year
+    local target_year is_current=0
     if [[ -n "$1" ]]; then
         if [[ "$1" =~ ^[0-9]{4}$ ]]; then
             target_year="$1"
@@ -2799,6 +2846,7 @@ show_year() {
         fi
     else
         target_year=$(date +%Y)
+        is_current=1
     fi
 
     local y_count y_best y_sum
@@ -2880,6 +2928,18 @@ show_year() {
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${y_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${y_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${year_sign}"
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month_label}  ${DIM}(avg ${best_month_avg})${RESET}"
+    if (( is_current )); then
+        local _gloss
+        if awk "BEGIN {exit !($y_avg > $alltime_avg)}"; then
+            _gloss="A year above the long average. ${best_month_label} was its strongest month."
+        elif awk "BEGIN {exit !($y_avg < $alltime_avg)}"; then
+            _gloss="The year has fallen below the long average. ${best_month_label} carried the most."
+        else
+            _gloss="The year holds at the long average."
+        fi
+        echo ""
+        echo -e "  ${DIM}${_gloss}${RESET}"
+    fi
     echo ""
 }
 
