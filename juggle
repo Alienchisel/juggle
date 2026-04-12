@@ -3409,7 +3409,8 @@ case "$1" in
         undo_last
         ;;
     lore)
-        _pick=$(gum choose \
+        _lore_tmp=$(mktemp)
+        gum choose \
             --header "LORE · SYSTEMS — select a section, or Esc to read all" \
             --header.foreground="8" \
             --cursor.foreground="1" \
@@ -3427,7 +3428,9 @@ case "$1" in
             "The Witness" \
             "The Attendants" \
             "The Codex" \
-            2>/dev/null)
+            > "$_lore_tmp" 2>/dev/null
+        _pick=$(cat "$_lore_tmp")
+        rm -f "$_lore_tmp"
         if [[ -z "$_pick" ]]; then
             show_lore | gum_pager
         else
