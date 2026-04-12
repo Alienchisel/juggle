@@ -1425,6 +1425,10 @@ check_codex() {
             print_codex_discovery "The Usurper" "A higher wall has claimed its place."
             any=1
         fi
+        if (( prev_nemesis > 0 )); then
+            echo -e "  ${DIM}The place of failure has moved.${RESET}"
+            echo ""
+        fi
         echo "${cur_nemesis},${cur_nemesis_count}" > "$NEMESIS_FILE"
     elif (( cur_nemesis > 0 )); then
         echo "${cur_nemesis},${cur_nemesis_count}" > "$NEMESIS_FILE"
