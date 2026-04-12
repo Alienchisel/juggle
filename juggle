@@ -1804,7 +1804,7 @@ show_trend() {
         return
     fi
 
-    gum_header "IVGVLATOR"$'\n'"· THE TREND ·"
+    gum_header "IVGVLATOR"$'\n'"· THE CURRENT ·"
 
     local today dow week_start
     today=$(date +%Y-%m-%d)
@@ -2301,7 +2301,7 @@ show_stats() {
     fi
 
     # ── Print main stats block ─────────────────────────────────────────────────
-    gum_header "$(printf 'IVGVLATOR\n· THE RECKONING ·')"
+    gum_header "IVGVLATOR"$'\n'"· THE RECKONING ·"
     echo -e "  ${BOLD}Apex          :${RESET}  ${YELLOW}${BOLD}${pb} catches${RESET}"
     if (( days_since_pb == 0 )); then
         echo -e "  ${BOLD}Apex age      :${RESET}  ${DIM}set today${RESET}"
