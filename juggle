@@ -1650,9 +1650,8 @@ show_codex() {
     local discovered=0 total=${#keys[@]}
     for key in "${keys[@]}"; do codex_discovered "$key" && (( discovered++ )); done
 
-    echo ""
-    echo -e "  ${BOLD}THE CODEX${RESET}  ${DIM}— ${discovered} of ${total} discovered${RESET}"
-    echo -e "  ${DIM}$(printf '─%.0s' {1..38})${RESET}"
+    gum_header "THE CODEX"
+    echo -e "  ${DIM}— ${discovered} of ${total} discovered${RESET}"
     echo ""
 
     for (( i=0; i<total; i++ )); do
@@ -1696,8 +1695,7 @@ show_scores() {
         fi
     }
 
-    echo -e "  ${BOLD}${YELLOW}TRIUMPHS${RESET}  ${DIM}(3-ball)${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    gum_header "TRIUMPHS"
 
     if (( total == 0 )); then
         echo -e "  ${DIM}No trials yet. Run ${RESET}${BOLD}juggle <catches>${RESET}${DIM} to get started!${RESET}"
@@ -1805,6 +1803,8 @@ show_trend() {
         echo -e "\n  No trials logged yet.\n"
         return
     fi
+
+    gum_header "THE TREND"
 
     local today dow week_start
     today=$(date +%Y-%m-%d)
@@ -2098,10 +2098,7 @@ show_apex() {
     local prev_val=0
     local i=0
 
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}APEX RECORD${RESET}  ${DIM}(last 10)${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    gum_header "APEX RECORD"
     while IFS=',' read -r ph_date ph_time ph_val; do
         (( i++ ))
         (( i <= skip )) && prev_val=$ph_val && continue
@@ -2303,9 +2300,7 @@ show_stats() {
     fi
 
     # ── Print main stats block ─────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${BOLD}${CYAN}IVGVLATOR — THE RECKONING${RESET}  ${DIM}(3-ball)${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    gum_header "$(printf 'IVGVLATOR\n· THE RECKONING ·')"
     echo -e "  ${BOLD}Apex          :${RESET}  ${YELLOW}${BOLD}${pb} catches${RESET}"
     if (( days_since_pb == 0 )); then
         echo -e "  ${BOLD}Apex age      :${RESET}  ${DIM}set today${RESET}"
