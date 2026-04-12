@@ -2807,24 +2807,31 @@ show_month() {
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${m_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${m_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${month_sign}"
     if (( is_current )); then
-        local _days_elapsed _gloss
-        _days_elapsed=$(date +%-d)
-        if awk "BEGIN {exit !($m_avg > $alltime_avg)}"; then
-            if (( active_days * 3 >= _days_elapsed * 2 )); then
-                _gloss="A consistent month. The long average was exceeded."
-            elif (( active_days * 4 <= _days_elapsed )); then
-                _gloss="Sparse returns — but the average held above the long line."
-            else
-                _gloss="The month ran above the long average."
-            fi
-        elif awk "BEGIN {exit !($m_avg < $alltime_avg)}"; then
-            if (( active_days * 4 <= _days_elapsed )); then
-                _gloss="A sparse month. The long average was not reached."
-            else
-                _gloss="The month fell below the long average."
-            fi
+        local _month_rank _month_total _gloss
+        read -r _month_rank _month_total <<< "$(awk -F',' -v m="$target_month" '
+            { key = substr($1,1,7); sum[key]+=$3; cnt[key]++ }
+            END {
+                cur = (cnt[m]>0 ? sum[m]/cnt[m] : 0)
+                n=0; rank=1
+                for (k in sum) {
+                    n++
+                    if (k != m && sum[k]/cnt[k] > cur) rank++
+                }
+                print rank, n
+            }
+        ' "$DATA_FILE")"
+        if (( _month_total == 1 )); then
+            _gloss="The first month on record."
+        elif (( _month_rank == 1 )); then
+            _gloss="The strongest month on record."
+        elif (( _month_rank == _month_total )); then
+            _gloss="The weakest month on record."
+        elif (( _month_rank * 4 <= _month_total )); then
+            _gloss="Among the stronger months on record."
+        elif (( _month_rank * 4 >= _month_total * 3 )); then
+            _gloss="Among the weaker months on record."
         else
-            _gloss="The month held at the long average."
+            _gloss="A middle-of-the-record month."
         fi
         echo ""
         echo -e "  ${DIM}${_gloss}${RESET}"
