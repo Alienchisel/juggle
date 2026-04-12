@@ -573,7 +573,6 @@ log_score() {
             echo -e "  Title claimed: ${new_rank}"
         fi
     fi
-    echo ""
 
     local rank
     rank=$(all_scores_sorted | awk -F',' -v score="$catches" -v date="$today" -v time="$now" '
@@ -582,10 +581,11 @@ log_score() {
         END { print rank+0 }
     ')
 
+    local top_pct=$(( rank * 100 / total ))
     if (( rank == 1 )); then
-        echo -e "  ${YELLOW}You are #1 in the Annals!${RESET}"
+        echo -e "  ${YELLOW}#1 in the Annals.${RESET}"
     else
-        echo -e "  You rank ${BOLD}#${rank}${RESET} out of ${total} trials."
+        echo -e "  #${BOLD}${rank}${RESET} of ${total} — top ${top_pct}%."
     fi
 
     echo ""
