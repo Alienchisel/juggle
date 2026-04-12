@@ -2213,22 +2213,11 @@ show_stats() {
     ')
     steadfast_threshold=$(( pb / 2 ))
 
-    # Zone: % of last 20 trials >= all-time 75th-percentile threshold
+    # Zone: % of last 20 trials >= 80% of Apex
     local zone_pct=0 zone_threshold=0
-    zone_threshold=$(awk -F',' '
-        { vals[NR] = $3 }
-        END {
-            n = NR
-            for (i = 1; i <= n; i++)
-                for (j = i + 1; j <= n; j++)
-                    if (vals[j] < vals[i]) { t = vals[i]; vals[i] = vals[j]; vals[j] = t }
-            idx = int(n * 0.75) + 1
-            if (idx > n) idx = n
-            print vals[idx] + 0
-        }
-    ' "$DATA_FILE")
-    zone_pct=$(tail -n20 "$DATA_FILE" | awk -F',' -v thr="$zone_threshold" '
-        { t++; if ($3 >= thr) g++ }
+    zone_threshold=$(( pb * 80 / 100 ))
+    zone_pct=$(tail -n20 "$DATA_FILE" | awk -F',' -v pb="$pb" '
+        { t++; if (pb > 0 && $3 * 100 / pb >= 80) g++ }
         END { printf "%d", (t > 0 ? int(g * 100 / t) : 0) }
     ')
 
@@ -3205,10 +3194,9 @@ show_lore() {
     echo -e "  the Apex. Measures your consistency floor: how reliably"
     echo -e "  you avoid a poor session."
     echo ""
-    echo -e "  ${BOLD}Zone${RESET}  —  % of last 20 trials that met or exceeded the"
-    echo -e "  all-time 75th-percentile catch count. Measures elite"
-    echo -e "  performance frequency: how often you are near your best."
-    echo -e "  ${DIM}The Zone threshold is fixed against your full history.${RESET}"
+    echo -e "  ${BOLD}Zone${RESET}  —  % of last 20 trials that scored ≥ 80% of the"
+    echo -e "  Apex. Measures high-end frequency: how often you are"
+    echo -e "  near your best."
 
     # ── Floor & Ceiling ───────────────────────────────────────────────────────
     echo ""
