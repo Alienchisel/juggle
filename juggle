@@ -1650,7 +1650,7 @@ show_codex() {
     local discovered=0 total=${#keys[@]}
     for key in "${keys[@]}"; do codex_discovered "$key" && (( discovered++ )); done
 
-    gum_header "THE CODEX"
+    gum_header "IVGVLATOR"$'\n'"· THE CODEX ·"
     echo -e "  ${DIM}— ${discovered} of ${total} discovered${RESET}"
     echo ""
 
@@ -1695,7 +1695,7 @@ show_scores() {
         fi
     }
 
-    gum_header "TRIUMPHS"
+    gum_header "IVGVLATOR"$'\n'"· TRIUMPHS ·"
 
     if (( total == 0 )); then
         echo -e "  ${DIM}No trials yet. Run ${RESET}${BOLD}juggle <catches>${RESET}${DIM} to get started!${RESET}"
@@ -1804,7 +1804,7 @@ show_trend() {
         return
     fi
 
-    gum_header "THE TREND"
+    gum_header "IVGVLATOR"$'\n'"· THE TREND ·"
 
     local today dow week_start
     today=$(date +%Y-%m-%d)
@@ -2099,7 +2099,7 @@ show_apex() {
     local prev_val=0
     local i=0
 
-    [[ -z "$no_header" ]] && gum_header "APEX RECORD"
+    [[ -z "$no_header" ]] && gum_header "IVGVLATOR"$'\n'"· APEX RECORD ·"
     while IFS=',' read -r ph_date ph_time ph_val; do
         (( i++ ))
         (( i <= skip )) && prev_val=$ph_val && continue
