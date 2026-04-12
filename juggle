@@ -82,7 +82,7 @@ gum_header() {
         --border "double" \
         --border-foreground "136" \
         --padding "1 4" \
-        --margin "1 0" \
+        --margin "1 0 1 2" \
         --align "center" \
         --bold \
         "$@"
@@ -1695,14 +1695,7 @@ show_scores() {
         fi
     }
 
-    gum style \
-        --border "double" \
-        --border-foreground "136" \
-        --padding "1 4" \
-        --margin "1 0 1 2" \
-        --align "center" \
-        --bold \
-        "TRIUMPHS"
+    gum_header "TRIUMPHS"
 
     if (( total == 0 )); then
         echo -e "  ${DIM}No trials yet. Run ${RESET}${BOLD}juggle <catches>${RESET}${DIM} to get started!${RESET}"
