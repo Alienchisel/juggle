@@ -3111,56 +3111,41 @@ undo_last() {
 
 # ── Lore ───────────────────────────────────────────────────────────────────────
 
-show_lore() {
+_lore_sep() {
     echo ""
-    gum_header "IVGVLATOR"$'\n'"· LORE · SYSTEMS ·"
-    echo ""
-    echo -e "  This record was not made to encourage. It does not measure"
-    echo -e "  effort, nor intent, nor promise. It marks only what was"
-    echo -e "  done — each trial inscribed without revision. Over time,"
-    echo -e "  patterns emerge: heights reached, lines held, failures"
-    echo -e "  repeated. Some who persist report other phenomena — an"
-    echo -e "  occasional voice, a presence at the edge of the work — but"
-    echo -e "  these are not recorded as fact. Only the trials are certain."
-    echo -e "  Everything else must be inferred."
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}${1}${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+}
 
-    # ── The Annals ────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}THE ANNALS${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_annals() {
+    _lore_sep "THE ANNALS"
     echo -e "  The cumulative record of every trial ever logged — the"
     echo -e "  full history from which ranks, titles, omens, and all"
     echo -e "  other measures are derived. ${BOLD}juggle top${RESET} shows the Annals"
     echo -e "  ranked by catch count."
+}
 
-    # ── The Apex ─────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}THE APEX${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_apex() {
+    _lore_sep "THE APEX"
     echo -e "  Your highest catch count ever recorded. Every metric in"
     echo -e "  this tool is measured against it. The full history of"
     echo -e "  every time it has been broken is preserved — see ${BOLD}juggle pb${RESET}."
     echo ""
     echo -e "  Breaking the Apex earns grade ${YELLOW}${BOLD}SSS${RESET} and the epithet"
     echo -e "  ${BLOOD}${BOLD}Sine pari.${RESET}  ${DIM}Without equal.${RESET}"
+}
 
-    # ── The Dispatch ─────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}THE DISPATCH${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_dispatch() {
+    _lore_sep "THE DISPATCH"
     echo -e "  The output shown immediately after logging a trial."
     echo -e "  Contains, in order: Apex status, rank in the Annals,"
     echo -e "  any Omens earned, the block-letter grade, ${BLOOD}${BOLD}Sine pari.${RESET}"
     echo -e "  if a new Apex was set, and the current Augury line."
+}
 
-    # ── Grades ────────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}GRADES${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_grades() {
+    _lore_sep "GRADES"
     echo -e "  Every trial is graded as a percentage of the current Apex."
     echo ""
     printf "  ${YELLOW}${BOLD}%-5s${RESET}  %s\n"  "SSS"  "≥ 100%  — equals or exceeds the Apex"
@@ -3171,43 +3156,39 @@ show_lore() {
     printf "  ${RED}%-5s${RESET}  %s\n"             "C"    "≥  35%"
     printf "  ${RED}%-5s${RESET}  %s\n"             "D"    "≥  20%"
     printf "  ${DIM}%-5s  %s${RESET}\n"             "F"    "<  20%"
+}
 
-    # ── Titles ────────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}TITLES${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_titles() {
+    _lore_sep "TITLES"
     echo -e "  Your Title is set by your current Apex and advances"
     echo -e "  as your best catch climbs. Titles are permanent — they"
     echo -e "  do not decay."
     echo ""
-    printf "  ${DIM}%-12s  %s${RESET}\n"          "Neophyte"   "any"
-    printf "  ${DIM}%-12s  %s${RESET}\n"          "Apprentice" "5+"
-    printf "  ${DIM}%-12s  %s${RESET}\n"          "Initiate"   "10+"
-    printf "  ${DIM}%-12s  %s${RESET}\n"          "Adept"      "15+"
-    printf "  ${CYAN}%-12s  %s${RESET}\n"         "Keeper"     "20+"
-    printf "  ${CYAN}%-12s  %s${RESET}\n"         "Knight"     "25+"
-    printf "  ${CYAN}%-12s  %s${RESET}\n"         "Harbinger"  "30+"
-    printf "  ${CYAN}%-12s  %s${RESET}\n"         "Conjuror"   "40+"
-    printf "  ${GREEN}%-12s  %s${RESET}\n"        "Sage"       "50+"
-    printf "  ${GREEN}%-12s  %s${RESET}\n"        "Phantom"    "75+"
-    printf "  ${GREEN}%-12s  %s${RESET}\n"        "Sovereign"  "100+"
-    printf "  ${YELLOW}%-12s  %s${RESET}\n"       "Luminant"   "125+"
-    printf "  ${YELLOW}%-12s  %s${RESET}\n"       "Oracle"     "150+"
-    printf "  ${YELLOW}%-12s  %s${RESET}\n"       "Auric"      "175+"
-    printf "  ${YELLOW}%-12s  %s${RESET}\n"       "Specter"    "200+"
-    printf "  ${MAGENTA}%-12s  %s${RESET}\n"      "Empyrean"   "250+"
-    printf "  ${MAGENTA}%-12s  %s${RESET}\n"      "Revenant"   "300+"
-    printf "  ${MAGENTA}%-12s  %s${RESET}\n"      "Colossus"   "400+"
-    printf "  ${RED}%-12s  %s${RESET}\n"          "Legend"     "500+"
-    printf "  ${RED}%-12s  %s${RESET}\n"          "Paragon"    "750+"
-    printf "  ${YELLOW}${BOLD}%-12s  %s${RESET}\n" "Immortal"  "1000+"
+    printf "  ${DIM}%-12s  %s${RESET}\n"           "Neophyte"   "any"
+    printf "  ${DIM}%-12s  %s${RESET}\n"           "Apprentice" "5+"
+    printf "  ${DIM}%-12s  %s${RESET}\n"           "Initiate"   "10+"
+    printf "  ${DIM}%-12s  %s${RESET}\n"           "Adept"      "15+"
+    printf "  ${CYAN}%-12s  %s${RESET}\n"          "Keeper"     "20+"
+    printf "  ${CYAN}%-12s  %s${RESET}\n"          "Knight"     "25+"
+    printf "  ${CYAN}%-12s  %s${RESET}\n"          "Harbinger"  "30+"
+    printf "  ${CYAN}%-12s  %s${RESET}\n"          "Conjuror"   "40+"
+    printf "  ${GREEN}%-12s  %s${RESET}\n"         "Sage"       "50+"
+    printf "  ${GREEN}%-12s  %s${RESET}\n"         "Phantom"    "75+"
+    printf "  ${GREEN}%-12s  %s${RESET}\n"         "Sovereign"  "100+"
+    printf "  ${YELLOW}%-12s  %s${RESET}\n"        "Luminant"   "125+"
+    printf "  ${YELLOW}%-12s  %s${RESET}\n"        "Oracle"     "150+"
+    printf "  ${YELLOW}%-12s  %s${RESET}\n"        "Auric"      "175+"
+    printf "  ${YELLOW}%-12s  %s${RESET}\n"        "Specter"    "200+"
+    printf "  ${MAGENTA}%-12s  %s${RESET}\n"       "Empyrean"   "250+"
+    printf "  ${MAGENTA}%-12s  %s${RESET}\n"       "Revenant"   "300+"
+    printf "  ${MAGENTA}%-12s  %s${RESET}\n"       "Colossus"   "400+"
+    printf "  ${RED}%-12s  %s${RESET}\n"           "Legend"     "500+"
+    printf "  ${RED}%-12s  %s${RESET}\n"           "Paragon"    "750+"
+    printf "  ${YELLOW}${BOLD}%-12s  %s${RESET}\n" "Immortal"   "1000+"
+}
 
-    # ── Omens ─────────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}OMENS${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_omens() {
+    _lore_sep "OMENS"
     echo -e "  Omens are one-time events. They fire once, are recorded"
     echo -e "  in the Annals, and never repeat."
     echo ""
@@ -3219,12 +3200,10 @@ show_lore() {
     echo -e "  ${DIM}5  10  25  50  75  100  150  200  300  400  500${RESET}"
     echo -e "  ${DIM}750  1000  1500  2000  3000  5000${RESET}"
     echo -e "  ${DIM}The message grows heavier as the count climbs.${RESET}"
+}
 
-    # ── Auguries ──────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}AUGURIES${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_auguries() {
+    _lore_sep "AUGURIES"
     echo -e "  Auguries are active conditions. Unlike Omens they are"
     echo -e "  not permanent — they persist as long as you sustain them"
     echo -e "  and vanish when you do not. Shown after every trial and"
@@ -3233,7 +3212,7 @@ show_lore() {
     echo -e "  ${GREEN}${BOLD}Chain${RESET}  —  consecutive calendar days with at least one trial."
     echo -e "  Displayed once the streak reaches 3 days. Breaks if a"
     echo -e "  day passes with no trial logged."
-      echo ""
+    echo ""
     echo -e "  ${CYAN}${BOLD}Spree${RESET}  —  a run of consecutive trials each scoring ≥ 50%"
     echo -e "  of the Apex. Displayed once 3 or more have run in a row."
     echo -e "  A single unworthy trial ends it."
@@ -3246,12 +3225,10 @@ show_lore() {
     echo -e "  3 or more times since it was set. Persists for as long"
     echo -e "  as the count holds. Each match also notes the running"
     echo -e "  count in The Dispatch. Resets if the Apex is broken."
+}
 
-    # ── Steadfastness & Zone ──────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}STEADFASTNESS & ZONE${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_steadfastness() {
+    _lore_sep "STEADFASTNESS & ZONE"
     echo -e "  Two complementary measures of recent form, each evaluated"
     echo -e "  over the last 20 trials. They answer different questions."
     echo ""
@@ -3262,12 +3239,10 @@ show_lore() {
     echo -e "  ${BOLD}Zone${RESET}  —  % of last 20 trials that scored ≥ 80% of the"
     echo -e "  Apex. Measures high-end frequency: how often you are"
     echo -e "  near your best."
+}
 
-    # ── Floor & Ceiling ───────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}FLOOR & CEILING${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_floor() {
+    _lore_sep "FLOOR & CEILING"
     echo -e "  Derived from the last 20 trials."
     echo ""
     echo -e "  ${BOLD}Floor${RESET}    —  10th percentile. Your realistic worst."
@@ -3275,42 +3250,34 @@ show_lore() {
     echo -e "  ${DIM}short of the Apex.${RESET}"
     echo ""
     echo -e "  Together they define the band you actually operate in."
+}
 
-    # ── Nemesis ───────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}NEMESIS${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_nemesis() {
+    _lore_sep "NEMESIS"
     echo -e "  The score below your Apex that you have hit most often."
     echo -e "  Shown in ${BOLD}juggle stats${RESET} when a score has appeared at least twice."
     echo -e "  ${DIM}The wall you keep running into.${RESET}"
+}
 
-    # ── The Witness ───────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}THE WITNESS${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_witness() {
+    _lore_sep "THE WITNESS"
     echo -e "  An occasional presence in The Dispatch. He speaks rarely,"
     echo -e "  and only when something is worth remarking on. His tone"
     echo -e "  is terse. He does not encourage."
+}
 
-    # ── The Attendants ────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}THE ATTENDANTS${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_attendants() {
+    _lore_sep "THE ATTENDANTS"
     echo -e "  Silent presences that accumulate over time. They do not speak."
     echo -e "  They do not act. They appear in The Dispatch, briefly, without"
     echo -e "  explanation. Their arrival is marked in The Codex."
     echo ""
     echo -e "  Each stage arrives only once, as trial count rises. Later stages"
     echo -e "  will not surface until earlier ones have been recorded."
+}
 
-    # ── The Codex ─────────────────────────────────────────────────────────────
-    echo ""
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}THE CODEX${RESET}"
-    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+_lore_codex_entry() {
+    _lore_sep "THE CODEX"
     echo -e "  Permanent discoveries earned through the annals. Each entry is"
     echo -e "  unlocked once and recorded forever in codex.csv with the date"
     echo -e "  of discovery."
@@ -3321,7 +3288,32 @@ show_lore() {
     echo -e "  Discoveries fire in The Dispatch the moment their condition is"
     echo -e "  first satisfied — including retroactively on the next trial"
     echo -e "  after The Codex is installed."
+}
 
+show_lore() {
+    gum_header "IVGVLATOR"$'\n'"· LORE · SYSTEMS ·"
+    echo ""
+    echo -e "  This record was not made to encourage. It does not measure"
+    echo -e "  effort, nor intent, nor promise. It marks only what was"
+    echo -e "  done — each trial inscribed without revision. Over time,"
+    echo -e "  patterns emerge: heights reached, lines held, failures"
+    echo -e "  repeated. Some who persist report other phenomena — an"
+    echo -e "  occasional voice, a presence at the edge of the work — but"
+    echo -e "  these are not recorded as fact. Only the trials are certain."
+    echo -e "  Everything else must be inferred."
+    _lore_annals
+    _lore_apex
+    _lore_dispatch
+    _lore_grades
+    _lore_titles
+    _lore_omens
+    _lore_auguries
+    _lore_steadfastness
+    _lore_floor
+    _lore_nemesis
+    _lore_witness
+    _lore_attendants
+    _lore_codex_entry
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo ""
@@ -3417,7 +3409,51 @@ case "$1" in
         undo_last
         ;;
     lore)
-        show_lore | gum_pager
+        local _pick
+        _pick=$(printf '%s\n' \
+            "The Annals" \
+            "The Apex" \
+            "The Dispatch" \
+            "Grades" \
+            "Titles" \
+            "Omens" \
+            "Auguries" \
+            "Steadfastness & Zone" \
+            "Floor & Ceiling" \
+            "Nemesis" \
+            "The Witness" \
+            "The Attendants" \
+            "The Codex" \
+            | gum filter \
+                --placeholder "Search sections…" \
+                --prompt "> " \
+                --header "LORE · SYSTEMS — select a section, or Esc to read all" \
+                --header.foreground="8" \
+                2>/dev/null)
+        if [[ -z "$_pick" ]]; then
+            show_lore | gum_pager
+        else
+            local _subtitle="${_pick^^}"
+            {
+                gum_header "IVGVLATOR"$'\n'"· LORE · ${_subtitle} ·"
+                case "$_pick" in
+                    "The Annals")           _lore_annals ;;
+                    "The Apex")             _lore_apex ;;
+                    "The Dispatch")         _lore_dispatch ;;
+                    "Grades")               _lore_grades ;;
+                    "Titles")               _lore_titles ;;
+                    "Omens")                _lore_omens ;;
+                    "Auguries")             _lore_auguries ;;
+                    "Steadfastness & Zone") _lore_steadfastness ;;
+                    "Floor & Ceiling")      _lore_floor ;;
+                    "Nemesis")              _lore_nemesis ;;
+                    "The Witness")          _lore_witness ;;
+                    "The Attendants")       _lore_attendants ;;
+                    "The Codex")            _lore_codex_entry ;;
+                esac
+                echo ""
+            } | gum_pager
+        fi
         ;;
     codex)
         show_codex | gum_pager
