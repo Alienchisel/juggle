@@ -617,7 +617,7 @@ log_score() {
     local _echo_count
     _echo_count=$(echo_count "$display_pb")
     local _aug_parts=()
-    (( _cur_streak >= 2      )) && _aug_parts+=("Chain at ${_cur_streak}.")
+    (( _cur_streak >= 3      )) && _aug_parts+=("Chain at ${_cur_streak}.")
     (( ${_sc:-0} >= 3        )) && _aug_parts+=("Spree at ${_sc}.")
     (( ${_da:-0}             )) && _aug_parts+=("Dominance.")
     (( _echo_count >= 3      )) && _aug_parts+=("Echo.")
@@ -2897,12 +2897,15 @@ show_last() {
     local pb
     pb=$(personal_best)
     echo ""
+    local i=1
     while IFS=',' read -r row_date row_time row_catches; do
         local grade_info grade colour
         grade_info=$(get_grade "$row_catches" "$pb")
         grade="${grade_info%%|*}"
         colour="${grade_info##*|}"
-        echo -e "  ${BOLD}$(printf '%-6s' "$row_catches")${RESET}  ${colour}$(printf '%-4s' "$grade")${RESET}  ${DIM}${row_date}  ${row_time}${RESET}"
+        printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s  %s${RESET}   ${colour}%-3s${RESET}\n" \
+            "$i" "$row_catches" "$row_date" "$row_time" "$grade"
+        (( i++ ))
     done < <(tail -n"$n" "$DATA_FILE" | tac)
     echo ""
 }
@@ -3088,7 +3091,7 @@ show_lore() {
     echo -e "  in ${BOLD}juggle stats${RESET}."
     echo ""
     echo -e "  ${GREEN}${BOLD}Chain${RESET}  —  consecutive calendar days with at least one trial."
-    echo -e "  Displayed once the streak reaches 2 days. Breaks if a"
+    echo -e "  Displayed once the streak reaches 3 days. Breaks if a"
     echo -e "  day passes with no trial logged."
       echo ""
     echo -e "  ${CYAN}${BOLD}Spree${RESET}  —  a run of consecutive trials each scoring ≥ 50%"
