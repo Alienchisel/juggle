@@ -3409,7 +3409,6 @@ case "$1" in
         undo_last
         ;;
     lore)
-        local _pick
         _pick=$(printf '%s\n' \
             "The Annals" \
             "The Apex" \
@@ -3433,7 +3432,7 @@ case "$1" in
         if [[ -z "$_pick" ]]; then
             show_lore | gum_pager
         else
-            local _subtitle="${_pick^^}"
+            _subtitle="${_pick^^}"
             {
                 gum_header "IVGVLATOR"$'\n'"· LORE · ${_subtitle} ·"
                 case "$_pick" in
