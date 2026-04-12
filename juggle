@@ -358,7 +358,7 @@ witness_speak() {
         failure)
             lines=(
                 "You keep returning to the same stone."
-                "The pattern is clear."
+                "The pattern tightens."
                 "This is the shape of the struggle."
                 "Noted."
                 "It will pass. Or it will not."
