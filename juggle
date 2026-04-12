@@ -3409,52 +3409,7 @@ case "$1" in
         undo_last
         ;;
     lore)
-        _lore_tmp=$(mktemp)
-        gum choose \
-            --header "LORE · SYSTEMS — select a section, or Esc to read all" \
-            --header.foreground="8" \
-            --cursor.foreground="1" \
-            --selected.foreground="136" \
-            "The Annals" \
-            "The Apex" \
-            "The Dispatch" \
-            "Grades" \
-            "Titles" \
-            "Omens" \
-            "Auguries" \
-            "Steadfastness & Zone" \
-            "Floor & Ceiling" \
-            "Nemesis" \
-            "The Witness" \
-            "The Attendants" \
-            "The Codex" \
-            > "$_lore_tmp" 2>/dev/null
-        _pick=$(cat "$_lore_tmp")
-        rm -f "$_lore_tmp"
-        if [[ -z "$_pick" ]]; then
-            show_lore | gum_pager
-        else
-            _subtitle="${_pick^^}"
-            {
-                gum_header "IVGVLATOR"$'\n'"· LORE · ${_subtitle} ·"
-                case "$_pick" in
-                    "The Annals")           _lore_annals ;;
-                    "The Apex")             _lore_apex ;;
-                    "The Dispatch")         _lore_dispatch ;;
-                    "Grades")               _lore_grades ;;
-                    "Titles")               _lore_titles ;;
-                    "Omens")                _lore_omens ;;
-                    "Auguries")             _lore_auguries ;;
-                    "Steadfastness & Zone") _lore_steadfastness ;;
-                    "Floor & Ceiling")      _lore_floor ;;
-                    "Nemesis")              _lore_nemesis ;;
-                    "The Witness")          _lore_witness ;;
-                    "The Attendants")       _lore_attendants ;;
-                    "The Codex")            _lore_codex_entry ;;
-                esac
-                echo ""
-            } | gum_pager
-        fi
+        show_lore | gum_pager
         ;;
     codex)
         show_codex | gum_pager
