@@ -582,6 +582,7 @@ log_score() {
     ')
 
     local top_pct=$(( rank * 100 / total ))
+    (( top_pct < 1 )) && top_pct=1
     if (( rank == 1 )); then
         echo -e "  ${YELLOW}#1 in the Annals.${RESET}"
     else
