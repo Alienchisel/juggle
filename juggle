@@ -3374,11 +3374,11 @@ case "$1" in
         ;;
     top)
         if [[ -z "$2" ]]; then
-            show_scores 10
+            show_scores 10 | gum_pager
         elif [[ "$2" == "all" ]]; then
             show_scores all | gum_pager
         elif [[ "$2" =~ ^[0-9]+$ ]]; then
-            show_scores "$2"
+            show_scores "$2" | gum_pager
         else
             echo -e "\n  ${RED}Unknown argument:${RESET} juggle top ${2}\n"
             usage
@@ -3388,28 +3388,28 @@ case "$1" in
         show_stats | gum_pager
         ;;
     pb)
-        show_apex
+        show_apex | gum_pager
         ;;
     trend)
-        show_trend
+        show_trend | gum_pager
         ;;
     day)
-        show_day "$2"
+        show_day "$2" | gum_pager
         ;;
     week)
-        show_week "$2"
+        show_week "$2" | gum_pager
         ;;
     month)
-        show_month "$2"
+        show_month "$2" | gum_pager
         ;;
     year)
-        show_year "$2"
+        show_year "$2" | gum_pager
         ;;
     last)
         if [[ -z "$2" ]]; then
-            show_last 1
+            show_last 1 | gum_pager
         elif [[ "$2" =~ ^[0-9]+$ ]]; then
-            show_last "$2"
+            show_last "$2" | gum_pager
         else
             echo -e "\n  ${RED}Unknown argument:${RESET} juggle last ${2}\n"
             usage
