@@ -69,6 +69,10 @@ gum_confirm() {
         "$@"
 }
 
+gum_pager() {
+    gum pager "$@"
+}
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 init_data() {
@@ -3356,7 +3360,7 @@ case "$1" in
         if [[ -z "$2" ]]; then
             show_scores 10
         elif [[ "$2" == "all" ]]; then
-            show_scores all
+            show_scores all | gum_pager
         elif [[ "$2" =~ ^[0-9]+$ ]]; then
             show_scores "$2"
         else
@@ -3365,7 +3369,7 @@ case "$1" in
         fi
         ;;
     stats)
-        show_stats
+        show_stats | gum_pager
         ;;
     pb)
         show_apex
@@ -3399,10 +3403,10 @@ case "$1" in
         undo_last
         ;;
     lore)
-        show_lore
+        show_lore | gum_pager
         ;;
     codex)
-        show_codex
+        show_codex | gum_pager
         ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 )); then
