@@ -2086,6 +2086,7 @@ show_trend() {
 
 show_apex() {
     local pb=${1:-$(personal_best)}
+    local no_header=${2:-}
 
     if [[ ! -s "$PB_FILE" ]]; then
         echo -e "\n  No Apex set yet.\n"
@@ -2098,7 +2099,7 @@ show_apex() {
     local prev_val=0
     local i=0
 
-    gum_header "APEX RECORD"
+    [[ -z "$no_header" ]] && gum_header "APEX RECORD"
     while IFS=',' read -r ph_date ph_time ph_val; do
         (( i++ ))
         (( i <= skip )) && prev_val=$ph_val && continue
@@ -2447,7 +2448,9 @@ show_stats() {
     fi
 
     # ── Apex Record ────────────────────────────────────────────────────────────
-    show_apex "$pb"
+    echo -e "\n  ${BOLD}Apex Record${RESET}  ${DIM}(last 10)${RESET}"
+    echo -e "  ${DIM}$(printf '─%.0s' {1..38})${RESET}"
+    show_apex "$pb" no_header
 
     # ── Trial Ledger ───────────────────────────────────────────────────────────
     echo ""
