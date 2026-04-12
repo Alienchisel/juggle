@@ -3115,8 +3115,6 @@ undo_last() {
 
 show_lore() {
     echo ""
-    gum_header "IVGVLATOR"$'\n'"· LORE · SYSTEMS ·"
-    echo ""
     echo -e "  This record was not made to encourage. It does not measure"
     echo -e "  effort, nor intent, nor promise. It marks only what was"
     echo -e "  done — each trial inscribed without revision. Over time,"
@@ -3419,6 +3417,7 @@ case "$1" in
         undo_last
         ;;
     lore)
+        gum_header "IVGVLATOR"$'\n'"· LORE · SYSTEMS ·"
         show_lore | gum_pager
         ;;
     codex)
