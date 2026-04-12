@@ -619,10 +619,10 @@ log_score() {
         echo ""
     fi
 
-    # ── Trajectory ────────────────────────────────────────────────────────────
-    local _traj_line=""
+    # ── Context line (trajectory + approaching thresholds, one chosen at random) ──
+    local _context_msgs=()
 
-    # Signal 1: rolling average direction (x10 integer to avoid float comparison)
+    # Trajectory: rolling average state update + rising signal
     local _prev_avg_x10=0 _up_streak=0
     [[ -f "$AVG_TREND_FILE" ]] && IFS=',' read -r _prev_avg_x10 _up_streak < "$AVG_TREND_FILE"
     _prev_avg_x10=${_prev_avg_x10:-0}
@@ -637,13 +637,11 @@ log_score() {
             _up_streak=0
         fi
         echo "${_cur_avg_x10},${_up_streak}" > "$AVG_TREND_FILE"
-        if (( _up_streak >= 3 )); then
-            _traj_line="Rolling average rising — ${_up_streak} consecutive checks."
-        fi
+        (( _up_streak >= 3 )) && _context_msgs+=("Rolling average rising — ${_up_streak} consecutive checks.")
     fi
 
-    # Signal 2: recent high (only if no Signal 1 and not a new Apex)
-    if [[ -z "$_traj_line" ]] && (( catches <= pb )); then
+    # Trajectory: recent high (not a new Apex)
+    if (( catches <= pb )); then
         for _w in 30 14 7; do
             local _w_date
             _w_date=$(date -d "$today -${_w} days" +%Y-%m-%d)
@@ -651,81 +649,71 @@ log_score() {
             read -r _w_count _w_max <<< "$(head -n -1 "$DATA_FILE" | awk -F',' \
                 -v d="$_w_date" '{if($1>=d){if($3+0>max)max=$3+0; n++}} END{print n+0, max+0}')"
             if (( _w_count >= 5 && catches > _w_max )); then
-                _traj_line="Highest score in ${_w} days."
+                _context_msgs+=("Highest score in ${_w} days.")
                 break
             fi
         done
     fi
 
-    if [[ -n "$_traj_line" ]]; then
-        echo -e "  ${DIM}${_traj_line}${RESET}"
-        echo ""
-    fi
-
-    # ── Approaching thresholds ─────────────────────────────────────────────────
-    local _approach_line=""
-
-    # Priority 1: Spree → SUSTAINED (10) or INEXORABLE (25)
+    # Approaching: Spree → SUSTAINED (10) or INEXORABLE (25)
     if ! codex_discovered "SUSTAINED" && (( ${_sc:-0} >= 5 && ${_sc:-0} < 10 )); then
         local _need=$(( 10 - ${_sc:-0} ))
         local _unit; (( _need == 1 )) && _unit="trial" || _unit="trials"
-        _approach_line="${_need} more worthy ${_unit} to The Sustained."
+        _context_msgs+=("${_need} more worthy ${_unit} to The Sustained.")
     elif ! codex_discovered "INEXORABLE" && (( ${_sc:-0} >= 20 && ${_sc:-0} < 25 )); then
         local _need=$(( 25 - ${_sc:-0} ))
         local _unit; (( _need == 1 )) && _unit="trial" || _unit="trials"
-        _approach_line="${_need} more worthy ${_unit} to The Inexorable."
+        _context_msgs+=("${_need} more worthy ${_unit} to The Inexorable.")
     fi
 
-    # Priority 2: Dominance streak → UNRELENTING (10)
-    if [[ -z "$_approach_line" ]] && ! codex_discovered "UNRELENTING"; then
+    # Approaching: Dominance streak → UNRELENTING (10)
+    if ! codex_discovered "UNRELENTING"; then
         local _dom_streak=0
         [[ -f "$DOMINANCE_STREAK_FILE" ]] && _dom_streak=$(cat "$DOMINANCE_STREAK_FILE")
         if (( _dom_streak >= 7 && _dom_streak < 10 )); then
             local _need=$(( 10 - _dom_streak ))
             local _unit; (( _need == 1 )) && _unit="check" || _unit="checks"
-            _approach_line="${_need} more consecutive ${_unit} to The Unrelenting."
+            _context_msgs+=("${_need} more consecutive ${_unit} to The Unrelenting.")
         fi
     fi
 
-    # Priority 3: Chain → THIRTY (30) or ANNUM (365)
-    if [[ -z "$_approach_line" ]]; then
-        if ! codex_discovered "THIRTY" && (( _cur_streak >= 23 && _cur_streak < 30 )); then
-            local _need=$(( 30 - _cur_streak ))
-            local _unit; (( _need == 1 )) && _unit="day" || _unit="days"
-            _approach_line="${_need} more ${_unit} to The Thirty."
-        elif ! codex_discovered "ANNUM" && (( _cur_streak >= 358 && _cur_streak < 365 )); then
-            local _need=$(( 365 - _cur_streak ))
-            local _unit; (( _need == 1 )) && _unit="day" || _unit="days"
-            _approach_line="${_need} more ${_unit} to The Annum."
-        fi
+    # Approaching: Chain → THIRTY (30) or ANNUM (365)
+    if ! codex_discovered "THIRTY" && (( _cur_streak >= 23 && _cur_streak < 30 )); then
+        local _need=$(( 30 - _cur_streak ))
+        local _unit; (( _need == 1 )) && _unit="day" || _unit="days"
+        _context_msgs+=("${_need} more ${_unit} to The Thirty.")
+    elif ! codex_discovered "ANNUM" && (( _cur_streak >= 358 && _cur_streak < 365 )); then
+        local _need=$(( 365 - _cur_streak ))
+        local _unit; (( _need == 1 )) && _unit="day" || _unit="days"
+        _context_msgs+=("${_need} more ${_unit} to The Annum.")
     fi
 
-    # Priority 4: SIEVE — ≤ 5 primes remaining
-    if [[ -z "$_approach_line" ]] && ! codex_discovered "SIEVE"; then
-        local _remaining
-        _remaining=$(awk -F',' '
+    # Approaching: SIEVE — ≤ 5 primes remaining
+    if ! codex_discovered "SIEVE"; then
+        local _sieve_remaining
+        _sieve_remaining=$(awk -F',' '
             BEGIN { split("2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97", p, " ")
                     for (i in p) need[p[i]] = 1 }
             { delete need[$3+0] }
             END { print length(need) }
         ' "$DATA_FILE")
-        if (( _remaining > 0 && _remaining <= 5 )); then
-            local _unit; (( _remaining == 1 )) && _unit="prime" || _unit="primes"
-            _approach_line="${_remaining} ${_unit} remaining for The Sieve."
+        if (( _sieve_remaining > 0 && _sieve_remaining <= 5 )); then
+            local _unit; (( _sieve_remaining == 1 )) && _unit="prime" || _unit="primes"
+            _context_msgs+=("${_sieve_remaining} ${_unit} remaining for The Sieve.")
         fi
     fi
 
-    # Priority 5: ASCENT — one more Apex away
-    if [[ -z "$_approach_line" ]] && ! codex_discovered "ASCENT"; then
+    # Approaching: ASCENT — one more Apex away
+    if ! codex_discovered "ASCENT"; then
         local _pb_count
         _pb_count=$(wc -l < "$PB_FILE")
-        if (( _pb_count == 4 )); then
-            _approach_line="One more Apex for The Ascent."
-        fi
+        (( _pb_count == 4 )) && _context_msgs+=("One more Apex for The Ascent.")
     fi
 
-    if [[ -n "$_approach_line" ]]; then
-        echo -e "  ${DIM}${_approach_line}${RESET}"
+    # Display one at random
+    if (( ${#_context_msgs[@]} > 0 )); then
+        local _pick=$(( RANDOM % ${#_context_msgs[@]} ))
+        echo -e "  ${DIM}${_context_msgs[$_pick]}${RESET}"
         echo ""
     fi
 
