@@ -58,6 +58,17 @@ DIM='\033[2m'
 ITALIC='\033[3m'
 RESET='\033[0m'
 
+# ── Gum wrappers (Gruvbox Light theme) ────────────────────────────────────────
+
+gum_confirm() {
+    gum confirm \
+        --prompt.foreground="1" \
+        --selected.background="1" \
+        --selected.foreground="0" \
+        --unselected.foreground="8" \
+        "$@"
+}
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
 init_data() {
@@ -3026,7 +3037,7 @@ undo_last() {
     IFS=',' read -r last_date last_time last_catches <<< "$(tail -n1 "$DATA_FILE")"
     echo ""
     echo -e "  ${BOLD}Last entry:${RESET}  ${BOLD}${last_catches} catches${RESET}  ${DIM}(${last_date} ${last_time})${RESET}"
-    if gum confirm "Remove this entry?"; then
+    if gum_confirm "Remove this entry?"; then
         local tmp
         tmp=$(mktemp)
         head -n -1 "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
