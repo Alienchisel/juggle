@@ -2942,8 +2942,11 @@ show_year() {
     echo -e "  ${BOLD}Avg           :${RESET}  ${y_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${year_sign}"
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month_label}  ${DIM}(avg ${best_month_avg})${RESET}"
     if (( is_current )); then
-        local _gloss
-        if awk "BEGIN {exit !($y_avg > $alltime_avg)}"; then
+        local _year_count _gloss
+        _year_count=$(awk -F',' '{y[substr($1,1,4)]=1} END{print length(y)}' "$DATA_FILE")
+        if (( _year_count == 1 )); then
+            _gloss="The first year on record."
+        elif awk "BEGIN {exit !($y_avg > $alltime_avg)}"; then
             _gloss="A year above the long average. ${best_month_label} was its strongest month."
         elif awk "BEGIN {exit !($y_avg < $alltime_avg)}"; then
             _gloss="The year has fallen below the long average. ${best_month_label} carried the most."
