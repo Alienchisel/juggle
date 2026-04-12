@@ -78,15 +78,13 @@ gum_pager() {
 }
 
 gum_header() {
-    local _w=$(( ${COLUMNS:-80} - 8 ))
     gum style \
         --border "double" \
         --border-foreground "136" \
         --padding "1 4" \
-        --margin "1 2" \
+        --margin "1 0" \
         --align "center" \
         --bold \
-        --width "$_w" \
         "$@"
 }
 
