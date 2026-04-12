@@ -617,14 +617,14 @@ log_score() {
     local _echo_count
     _echo_count=$(echo_count "$display_pb")
     local _aug_parts=()
-    (( _cur_streak >= 2      )) && _aug_parts+=("Chain ${_cur_streak}")
-    (( ${_sc:-0} >= 3        )) && _aug_parts+=("Spree ${_sc}")
-    (( ${_da:-0}             )) && _aug_parts+=("Dominance")
-    (( _echo_count >= 3      )) && _aug_parts+=("Echo")
+    (( _cur_streak >= 2      )) && _aug_parts+=("Chain at ${_cur_streak}.")
+    (( ${_sc:-0} >= 3        )) && _aug_parts+=("Spree at ${_sc}.")
+    (( ${_da:-0}             )) && _aug_parts+=("Dominance.")
+    (( _echo_count >= 3      )) && _aug_parts+=("Echo.")
     if (( ${#_aug_parts[@]} > 0 )); then
         local _aug_line
-        _aug_line=$(printf '%s  ·  ' "${_aug_parts[@]}")
-        echo -e "  ${DIM}${_aug_line%  ·  }${RESET}"
+        _aug_line=$(printf '%s  ' "${_aug_parts[@]}")
+        echo -e "  ${DIM}${_aug_line% }${RESET}"
         echo ""
     fi
 
