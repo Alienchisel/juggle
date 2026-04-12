@@ -79,12 +79,12 @@ gum_pager() {
 
 gum_header() {
     gum style \
-        --foreground "6" \
+        --border "double" \
+        --border-foreground "136" \
+        --padding "1 4" \
+        --margin "1 0" \
+        --align "center" \
         --bold \
-        --border "normal" \
-        --border-foreground "130" \
-        --padding "0 1" \
-        --width 40 \
         "$@"
 }
 
@@ -3112,7 +3112,7 @@ undo_last() {
 
 show_lore() {
     echo ""
-    gum_header "IVGVLATOR — LORE & SYSTEMS"
+    gum_header "IVGVLATOR"$'\n'"· LORE · SYSTEMS ·"
     echo ""
     echo -e "  This record was not made to encourage. It does not measure"
     echo -e "  effort, nor intent, nor promise. It marks only what was"
