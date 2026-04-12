@@ -2626,7 +2626,7 @@ show_week() {
         return
     fi
 
-    local ref_date
+    local ref_date is_current=0
     if [[ -n "$1" ]]; then
         if [[ "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
             ref_date="$1"
@@ -2636,6 +2636,7 @@ show_week() {
         fi
     else
         ref_date=$(date +%Y-%m-%d)
+        is_current=1
     fi
 
     local dow week_start week_end
@@ -2706,6 +2707,42 @@ show_week() {
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of 7"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${w_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${w_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${week_sign}"
+    if (( is_current )); then
+        local _week_rank _week_total _gloss
+        read -r _week_rank _week_total <<< "$(awk -F',' -v ws="$week_start" '
+            function wstart(d,    y,m,dd,t,dow) {
+                y=substr(d,1,4)+0; m=substr(d,6,2)+0; dd=substr(d,9,2)+0
+                t=mktime(y " " m " " dd " 12 0 0")
+                dow=strftime("%u",t)+0
+                return strftime("%Y-%m-%d", t-(dow-1)*86400)
+            }
+            { key=wstart($1); sum[key]+=$3; cnt[key]++ }
+            END {
+                cur=(cnt[ws]>0 ? sum[ws]/cnt[ws] : 0)
+                n=0; rank=1
+                for (k in sum) {
+                    n++
+                    if (k != ws && sum[k]/cnt[k] > cur) rank++
+                }
+                print rank, n
+            }
+        ' "$DATA_FILE")"
+        if (( _week_total == 1 )); then
+            _gloss="The first week on record."
+        elif (( _week_rank == 1 )); then
+            _gloss="The strongest week on record."
+        elif (( _week_rank == _week_total )); then
+            _gloss="The weakest week on record."
+        elif (( _week_rank * 4 <= _week_total )); then
+            _gloss="Among the stronger weeks on record."
+        elif (( _week_rank * 4 >= _week_total * 3 )); then
+            _gloss="Among the weaker weeks on record."
+        else
+            _gloss="A middle-of-the-record week."
+        fi
+        echo ""
+        echo -e "  ${DIM}${_gloss}${RESET}"
+    fi
     echo ""
 }
 
