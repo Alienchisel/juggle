@@ -662,6 +662,73 @@ log_score() {
         echo ""
     fi
 
+    # ── Approaching thresholds ─────────────────────────────────────────────────
+    local _approach_line=""
+
+    # Priority 1: Spree → SUSTAINED (10) or INEXORABLE (25)
+    if ! codex_discovered "SUSTAINED" && (( ${_sc:-0} >= 5 && ${_sc:-0} < 10 )); then
+        local _need=$(( 10 - ${_sc:-0} ))
+        local _unit; (( _need == 1 )) && _unit="trial" || _unit="trials"
+        _approach_line="${_need} more worthy ${_unit} to The Sustained."
+    elif ! codex_discovered "INEXORABLE" && (( ${_sc:-0} >= 20 && ${_sc:-0} < 25 )); then
+        local _need=$(( 25 - ${_sc:-0} ))
+        local _unit; (( _need == 1 )) && _unit="trial" || _unit="trials"
+        _approach_line="${_need} more worthy ${_unit} to The Inexorable."
+    fi
+
+    # Priority 2: Dominance streak → UNRELENTING (10)
+    if [[ -z "$_approach_line" ]] && ! codex_discovered "UNRELENTING"; then
+        local _dom_streak=0
+        [[ -f "$DOMINANCE_STREAK_FILE" ]] && _dom_streak=$(cat "$DOMINANCE_STREAK_FILE")
+        if (( _dom_streak >= 7 && _dom_streak < 10 )); then
+            local _need=$(( 10 - _dom_streak ))
+            local _unit; (( _need == 1 )) && _unit="check" || _unit="checks"
+            _approach_line="${_need} more consecutive ${_unit} to The Unrelenting."
+        fi
+    fi
+
+    # Priority 3: Chain → THIRTY (30) or ANNUM (365)
+    if [[ -z "$_approach_line" ]]; then
+        if ! codex_discovered "THIRTY" && (( _cur_streak >= 23 && _cur_streak < 30 )); then
+            local _need=$(( 30 - _cur_streak ))
+            local _unit; (( _need == 1 )) && _unit="day" || _unit="days"
+            _approach_line="${_need} more ${_unit} to The Thirty."
+        elif ! codex_discovered "ANNUM" && (( _cur_streak >= 358 && _cur_streak < 365 )); then
+            local _need=$(( 365 - _cur_streak ))
+            local _unit; (( _need == 1 )) && _unit="day" || _unit="days"
+            _approach_line="${_need} more ${_unit} to The Annum."
+        fi
+    fi
+
+    # Priority 4: SIEVE — ≤ 5 primes remaining
+    if [[ -z "$_approach_line" ]] && ! codex_discovered "SIEVE"; then
+        local _remaining
+        _remaining=$(awk -F',' '
+            BEGIN { split("2 3 5 7 11 13 17 19 23 29 31 37 41 43 47 53 59 61 67 71 73 79 83 89 97", p, " ")
+                    for (i in p) need[p[i]] = 1 }
+            { delete need[$3+0] }
+            END { print length(need) }
+        ' "$DATA_FILE")
+        if (( _remaining > 0 && _remaining <= 5 )); then
+            local _unit; (( _remaining == 1 )) && _unit="prime" || _unit="primes"
+            _approach_line="${_remaining} ${_unit} remaining for The Sieve."
+        fi
+    fi
+
+    # Priority 5: ASCENT — one more Apex away
+    if [[ -z "$_approach_line" ]] && ! codex_discovered "ASCENT"; then
+        local _pb_count
+        _pb_count=$(wc -l < "$PB_FILE")
+        if (( _pb_count == 4 )); then
+            _approach_line="One more Apex for The Ascent."
+        fi
+    fi
+
+    if [[ -n "$_approach_line" ]]; then
+        echo -e "  ${DIM}${_approach_line}${RESET}"
+        echo ""
+    fi
+
     # ── The Attendants ─────────────────────────────────────────────────────────
     check_attendants "$total" "$today"
 
