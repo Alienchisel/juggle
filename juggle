@@ -8,9 +8,9 @@
 #   juggle top <N>        Show top N Triumphs
 #   juggle top all        Show full record, oldest first
 #   juggle stats          The Reckoning: Title, Apex record, Auguries,
-#                         Trial Ledger, trend, and last 20 trials chart
+#                         Trial Ledger, and last 20 trials chart
 #   juggle pb             Apex record table in isolation
-#   juggle trend          Week/month comparisons & 12-week sparkline
+#   juggle trend          The Current: week/month comparisons & 12-week sparkline
 #   juggle day  [YYYY-MM-DD] Daily summary (default: today)
 #   juggle week [YYYY-MM-DD] Weekly recap — any date in the week (default: this week)
 #   juggle month [YYYY-MM] Monthly recap (default: current month)
@@ -3342,7 +3342,7 @@ usage() {
     echo -e "    juggle top ${CYAN}all${RESET}         Full record  ${DIM}(chronological)${RESET}"
     echo -e "    juggle stats           The Reckoning: Apex, Auguries, Titles & charts"
     echo -e "    juggle pb              Apex record table in isolation"
-    echo -e "    juggle trend           Week/month comparisons & 12-week sparkline"
+    echo -e "    juggle trend           The Current: week/month comparisons & 12-week sparkline"
     echo -e "    juggle day   [YYYY-MM-DD] Today (or specific date) recap"
     echo -e "    juggle week  [YYYY-MM-DD] This week (or week containing date) recap"
     echo -e "    juggle month [YYYY-MM] This month (or specific month) recap"
