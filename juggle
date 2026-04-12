@@ -84,6 +84,7 @@ gum_header() {
         --border "normal" \
         --border-foreground "130" \
         --padding "0 1" \
+        --width 40 \
         "$@"
 }
 
