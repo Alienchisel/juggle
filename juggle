@@ -2596,23 +2596,29 @@ show_day() {
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${day_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${day_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}"
     if (( is_current )); then
-        local _gloss
-        if awk "BEGIN {exit !($day_avg > $alltime_avg)}"; then
-            if (( day_count >= 3 )); then
-                _gloss="Multiple returns. The day ran above the long line."
+        local _above_count _gloss
+        _above_count=$(awk -F',' -v d="$target_date" -v avg="$alltime_avg" '
+            $1 == d && $3+0 > avg+0 { n++ }
+            END { print n+0 }
+        ' "$DATA_FILE")
+        if (( day_count == 1 )); then
+            if (( _above_count == 1 )); then
+                _gloss="A trial above the long line."
             else
-                _gloss="A day above the long line."
+                _gloss="A trial below the long line."
             fi
-        elif awk "BEGIN {exit !($day_avg < $alltime_avg)}"; then
-            if (( day_count >= 3 )); then
-                _gloss="Multiple returns. The long line was not reached."
-            elif (( day_count == 1 )); then
-                _gloss="A single trial. Below the long line."
+        elif (( _above_count == day_count )); then
+            _gloss="Every trial today cleared the long line."
+        elif (( _above_count * 5 >= day_count * 3 )); then
+            _gloss="Most trials today cleared the long line."
+        elif (( _above_count * 5 <= day_count * 2 )); then
+            if (( _above_count == 0 )); then
+                _gloss="No trial today reached the long line."
             else
-                _gloss="The day fell below the long line."
+                _gloss="Few trials today reached the long line."
             fi
         else
-            _gloss="The day held at the long line."
+            _gloss="The trials were divided."
         fi
         echo ""
         echo -e "  ${DIM}${_gloss}${RESET}"
