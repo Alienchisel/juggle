@@ -378,7 +378,7 @@ witness_speak() {
                 "Some days are inventory."
                 "It happens. It is noted."
                 "Not every trial is a trial."
-                "Rest is also data."
+                "The body rests. The record waits."
                 "The hands were not here."
                 "This one will not be remembered."
                 "Filed."
@@ -544,7 +544,7 @@ log_score() {
         if (( ec >= 3 )); then
             echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} Echoed ${ec} times."
         else
-            echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} So close to breaking it…"
+            echo -e "  ${CYAN}${BOLD}Matched your Apex of ${catches}!${RESET} The record endures. By one."
         fi
     elif (( pb > 0 && catches >= pb * 80 / 100 )); then
         echo -e "  ${GREEN}A worthy trial.${RESET} ${BOLD}${catches} catches${RESET} — within striking distance of your best (${pb})."
@@ -646,7 +646,7 @@ log_score() {
             _up_streak=0
         fi
         echo "${_cur_avg_x10},${_up_streak}" > "$AVG_TREND_FILE"
-        (( _up_streak >= 3 )) && _context_msgs+=("The average has risen for ${_up_streak} consecutive checks.")
+        (( _up_streak >= 3 )) && _context_msgs+=("The average has risen for ${_up_streak} consecutive trials.")
     fi
 
     # Trajectory: recent high (not a new Apex)
