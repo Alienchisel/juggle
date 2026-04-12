@@ -82,7 +82,7 @@ gum_header() {
         --border "double" \
         --border-foreground "136" \
         --padding "1 4" \
-        --margin "1 0 1 2" \
+        --margin "1 2" \
         --align "center" \
         --bold \
         "$@"
