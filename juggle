@@ -3394,16 +3394,16 @@ case "$1" in
         show_trend | gum_pager
         ;;
     day)
-        show_day "$2" | gum_pager
+        show_day "$2"
         ;;
     week)
-        show_week "$2" | gum_pager
+        show_week "$2"
         ;;
     month)
-        show_month "$2" | gum_pager
+        show_month "$2"
         ;;
     year)
-        show_year "$2" | gum_pager
+        show_year "$2"
         ;;
     last)
         if [[ -z "$2" ]]; then
