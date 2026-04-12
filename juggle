@@ -70,7 +70,7 @@ gum_confirm() {
 }
 
 gum_pager() {
-    gum pager "$@"
+    gum pager --show-line-numbers=false "$@"
 }
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
