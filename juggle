@@ -3377,7 +3377,17 @@ case "$1" in
         fi
         ;;
     stats)
-        show_stats | gum_pager
+        _stats_tmp=$(mktemp)
+        show_stats > "$_stats_tmp" &
+        _stats_pid=$!
+        gum spin \
+            --spinner dot \
+            --title " Reckoning…" \
+            --spinner.foreground="136" \
+            --title.foreground="8" \
+            -- sh -c "while kill -0 $_stats_pid 2>/dev/null; do sleep 0.05; done"
+        cat "$_stats_tmp" | gum_pager
+        rm -f "$_stats_tmp"
         ;;
     pb)
         show_apex | gum_pager
