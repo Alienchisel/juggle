@@ -2095,7 +2095,7 @@ show_apex() {
 
     local pb_count
     pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
-    local skip=$(( pb_count > 10 ? pb_count - 10 : 0 ))
+    local skip=$(( pb_count > 100 ? pb_count - 100 : 0 ))
     local prev_val=0
     local i=0
 
@@ -2448,7 +2448,7 @@ show_stats() {
     fi
 
     # ── Apex Record ────────────────────────────────────────────────────────────
-    echo -e "\n  ${BOLD}Apex Record${RESET}  ${DIM}(last 10)${RESET}"
+    echo -e "\n  ${BOLD}Apex Record${RESET}  ${DIM}(last 100)${RESET}"
     echo -e "  ${DIM}$(printf '─%.0s' {1..38})${RESET}"
     show_apex "$pb" no_header
 
