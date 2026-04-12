@@ -71,9 +71,9 @@ gum_confirm() {
 
 gum_pager() {
     GUM_PAGER_BORDER_FOREGROUND="130" \
+    GUM_PAGER_MATCH_FOREGROUND="1" \
     gum pager \
         --show-line-numbers=false \
-        --match.foreground="1" \
         "$@"
 }
 
