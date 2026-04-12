@@ -3362,32 +3362,7 @@ init_data
 
 case "$1" in
     ''|--help|-h)
-        _menu_tmp=$(mktemp)
-        gum choose \
-            --header "IVGVLATOR — what would you like to do?" \
-            --header.foreground="8" \
-            --cursor.foreground="1" \
-            --selected.foreground="136" \
-            "top      — Triumphs" \
-            "stats    — The Reckoning" \
-            "pb       — Apex Record" \
-            "trend    — The Current" \
-            "last     — Recent Trials" \
-            "day      — Today" \
-            "week     — This Week" \
-            "month    — This Month" \
-            "year     — This Year" \
-            "lore     — Lore & Systems" \
-            "codex    — The Codex" \
-            > "$_menu_tmp" 2>/dev/null
-        _menu_pick=$(cat "$_menu_tmp")
-        rm -f "$_menu_tmp"
-        if [[ -z "$_menu_pick" ]]; then
-            usage
-        else
-            _menu_cmd="${_menu_pick%%  *}"
-            exec "$0" "$_menu_cmd"
-        fi
+        usage
         ;;
     top)
         if [[ -z "$2" ]]; then
