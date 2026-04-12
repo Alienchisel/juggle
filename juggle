@@ -2984,6 +2984,16 @@ show_lore() {
     echo -e "  ${BOLD}${CYAN}IVGVLATOR — LORE & SYSTEMS${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
 
+    echo ""
+    echo -e "  This record was not made to encourage. It does not measure"
+    echo -e "  effort, nor intent, nor promise. It marks only what was"
+    echo -e "  done — each trial inscribed without revision. Over time,"
+    echo -e "  patterns emerge: heights reached, lines held, failures"
+    echo -e "  repeated. Some who persist report other phenomena — an"
+    echo -e "  occasional voice, a presence at the edge of the work — but"
+    echo -e "  these are not recorded as fact. Only the trials are certain."
+    echo -e "  Everything else must be inferred."
+
     # ── The Annals ────────────────────────────────────────────────────────────
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
