@@ -6,7 +6,7 @@
 #   juggle <number>       Log a trial (catches before a drop)
 #   juggle top            Show top 10 Triumphs
 #   juggle top <N>        Show top N Triumphs
-#   juggle top all        Show full record, oldest first
+#   juggle top all        Show full record, best first
 #   juggle stats          The Reckoning: Title, Apex record, Auguries,
 #                         Trial Ledger, and last 20 trials chart
 #   juggle pb             Apex record table in isolation
@@ -1754,15 +1754,23 @@ show_scores() {
     fi
 
     if [[ "$limit" == "all" ]]; then
-        echo -e "  ${DIM}Full record — oldest first${RESET}"
+        echo -e "  ${DIM}Full record — best first${RESET}"
         echo -e "  ${DIM}──────────────────────────────────────${RESET}"
         local i=1
         while IFS=',' read -r date time catches; do
             _grd "$catches"
-            printf "  ${DIM}%4d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${_gc}%-3s${RESET}\n" \
-                "$i" "$catches" "$date" "$_g"
+            if (( i == 1 )); then
+                printf "  ${YELLOW}${BOLD}%4d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
+                    "$i" "$catches" "$date" "$_g"
+            elif (( i <= 3 )); then
+                printf "  ${CYAN}${BOLD}%4d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
+                    "$i" "$catches" "$date" "$_g"
+            else
+                printf "  ${DIM}%4d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${_gc}%-3s${RESET}\n" \
+                    "$i" "$catches" "$date" "$_g"
+            fi
             (( i++ ))
-        done < "$DATA_FILE"
+        done < <(all_scores_sorted)
     else
         local i=1
         while IFS=',' read -r date time catches; do
@@ -3463,7 +3471,7 @@ usage() {
     echo -e "    juggle ${CYAN}<number>${RESET}        Log a trial  ${DIM}(e.g. juggle 20)${RESET}"
     echo -e "    juggle top             Show top 10 Triumphs"
     echo -e "    juggle top ${CYAN}<N>${RESET}         Show top N Triumphs"
-    echo -e "    juggle top ${CYAN}all${RESET}         Full record  ${DIM}(chronological)${RESET}"
+    echo -e "    juggle top ${CYAN}all${RESET}         Full record  ${DIM}(best first)${RESET}"
     echo -e "    juggle stats           The Reckoning: Apex, Auguries, Titles & charts"
     echo -e "    juggle pb              Apex record table in isolation"
     echo -e "    juggle trend           The Current: week/month comparisons & 12-week sparkline"
