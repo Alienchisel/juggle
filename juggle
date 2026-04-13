@@ -2963,7 +2963,7 @@ show_month() {
     local month_label
     month_label=$(date -d "${target_month}-01" "+%B %Y")
 
-    echo ""
+    gum_header "IVGVLATOR"$'\n'"· MONTH RECAP ·"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}MONTH${RESET}  ${DIM}${month_label}${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -3001,6 +3001,41 @@ show_month() {
         echo ""
         echo -e "  ${DIM}${_gloss}${RESET}"
     fi
+
+    # Per-week breakdown
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local month_first="${target_month}-01"
+    local month_last
+    month_last=$(date -d "${target_month}-01 +1 month -1 day" +%Y-%m-%d)
+    local first_dow
+    first_dow=$(date -d "$month_first" +%u)
+    local w_start
+    w_start=$(date -d "$month_first -$(( first_dow - 1 )) days" +%Y-%m-%d)
+    while [[ ! "$w_start" > "$month_last" ]]; do
+        local w_end
+        w_end=$(date -d "$w_start +6 days" +%Y-%m-%d)
+        local w_label
+        w_label="$(date -d "$w_start" "+%b %-d") – $(date -d "$w_end" "+%b %-d")"
+        local wc wb
+        read -r wc wb <<< "$(awk -F',' -v s="$w_start" -v e="$w_end" -v m="$target_month" '
+            $1 >= s && $1 <= e && substr($1,1,7) == m { n++; if ($3 > best) best=$3 }
+            END { printf "%d %d", n+0, best+0 }
+        ' "$DATA_FILE")"
+        if (( wc == 0 )); then
+            printf "  ${DIM}%s  —${RESET}\n" "$w_label"
+        else
+            local wgrade_info wgrade wgrade_colour
+            wgrade_info=$(get_grade "$wb" "$pb")
+            wgrade="${wgrade_info%%|*}"
+            wgrade_colour="${wgrade_info##*|}"
+            local trial_word="trials"
+            (( wc == 1 )) && trial_word="trial "
+            printf "  ${BOLD}%s${RESET}  %2d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  ${wgrade_colour}%-3s${RESET}\n" \
+                "$w_label" "$wc" "$wb" "$wgrade"
+        fi
+        w_start=$(date -d "$w_start +7 days" +%Y-%m-%d)
+    done
     echo ""
 }
 
@@ -3583,7 +3618,7 @@ case "$1" in
         show_week "$2" | gum_pager
         ;;
     month)
-        show_month "$2"
+        show_month "$2" | gum_pager
         ;;
     year)
         show_year "$2"
