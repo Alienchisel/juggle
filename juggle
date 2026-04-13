@@ -3132,7 +3132,7 @@ show_year() {
     grade="${grade_info%%|*}"
     grade_colour="${grade_info##*|}"
 
-    echo ""
+    gum_header "IVGVLATOR"$'\n'"· YEAR RECAP ·"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}YEAR${RESET}  ${DIM}${target_year}${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -3156,6 +3156,34 @@ show_year() {
         echo ""
         echo -e "  ${DIM}${_gloss}${RESET}"
     fi
+
+    # Per-month breakdown
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local m
+    for (( m=1; m<=12; m++ )); do
+        local month_key
+        printf -v month_key "%s-%02d" "$target_year" "$m"
+        local month_name
+        month_name=$(date -d "${month_key}-01" "+%B")
+        local mc mb
+        read -r mc mb <<< "$(awk -F',' -v mk="$month_key" '
+            substr($1,1,7) == mk { n++; if ($3 > best) best=$3 }
+            END { printf "%d %d", n+0, best+0 }
+        ' "$DATA_FILE")"
+        if (( mc == 0 )); then
+            printf "  ${DIM}%-9s  —${RESET}\n" "$month_name"
+        else
+            local mgrade_info mgrade mgrade_colour
+            mgrade_info=$(get_grade "$mb" "$pb")
+            mgrade="${mgrade_info%%|*}"
+            mgrade_colour="${mgrade_info##*|}"
+            local trial_word="trials"
+            (( mc == 1 )) && trial_word="trial "
+            printf "  ${BOLD}%-9s${RESET}  %3d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  ${mgrade_colour}%-3s${RESET}\n" \
+                "$month_name" "$mc" "$mb" "$mgrade"
+        fi
+    done
     echo ""
 }
 
@@ -3621,7 +3649,7 @@ case "$1" in
         show_month "$2" | gum_pager
         ;;
     year)
-        show_year "$2"
+        show_year "$2" | gum_pager
         ;;
     last)
         if [[ -z "$2" ]]; then
