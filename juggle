@@ -2136,6 +2136,7 @@ show_trend() {
 show_apex() {
     local pb=${1:-$(personal_best)}
     local no_header=${2:-}
+    local limit=${3:-0}
 
     if [[ ! -s "$PB_FILE" ]]; then
         echo -e "\n  No Apex set yet.\n"
@@ -2144,7 +2145,7 @@ show_apex() {
 
     local pb_count
     pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
-    local skip=$(( pb_count > 100 ? pb_count - 100 : 0 ))
+    local skip=$(( limit > 0 && pb_count > limit ? pb_count - limit : 0 ))
     local prev_val=0
     local i=0
 
@@ -2497,9 +2498,9 @@ show_stats() {
     fi
 
     # ── Apex Record ────────────────────────────────────────────────────────────
-    echo -e "\n  ${BOLD}Apex Record${RESET}  ${DIM}(last 100)${RESET}"
+    echo -e "\n  ${BOLD}Apex Record${RESET}  ${DIM}(last 10)${RESET}"
     echo -e "  ${DIM}$(printf '─%.0s' {1..38})${RESET}"
-    show_apex "$pb" no_header
+    show_apex "$pb" no_header 10
 
     # ── Trial Ledger ───────────────────────────────────────────────────────────
     echo ""
