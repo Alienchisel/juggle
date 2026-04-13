@@ -2166,10 +2166,11 @@ show_apex() {
         local ph_date="${_dates[$j]}" ph_time="${_times[$j]}" ph_val="${_vals[$j]}"
         local diff_str=""
         if (( j == 0 )); then
-            diff_str="${DIM}start${RESET}"
+            diff_str="${DIM}  ·${RESET}"
         else
             local d=$(( ph_val - _vals[j-1] ))
-            diff_str="${GREEN}+${d}${RESET}"
+            local dpad; printf -v dpad "%+3d" "$d"
+            diff_str="${GREEN}${dpad}${RESET}"
         fi
         local grade_info grade grade_colour
         grade_info=$(get_grade "$ph_val" "$pb")
