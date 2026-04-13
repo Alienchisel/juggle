@@ -340,12 +340,45 @@ print_grade() {
             ;;
     esac
 
+    local pad="   "
+    local inner=$(( ${#L1} + 6 ))
+    local TL TR BL BR H V
+    if [[ "$grade" == "SS" || "$grade" == "SSS" ]]; then
+        TL="╔" TR="╗" BL="╚" BR="╝" H="═" V="║"
+    else
+        TL="╭" TR="╮" BL="╰" BR="╯" H="─" V="│"
+    fi
+
+    local rule="" i
+    for (( i=0; i<inner; i++ )); do rule+="$H"; done
+
+    local empty; printf -v empty "%${inner}s" ""
+
+    local pct_line=""
+    if (( pb > 0 )); then
+        local pct=$(( catches * 100 / pb ))
+        local pstr="${pct}%"
+        local lp=$(( (inner - ${#pstr}) / 2 ))
+        local rp=$(( inner - ${#pstr} - lp ))
+        local sl sr; printf -v sl "%${lp}s" ""; printf -v sr "%${rp}s" ""
+        pct_line="${sl}${pstr}${sr}"
+    fi
+
+    local m="  "
     echo ""
-    echo -e "  ${colour}${L1}${RESET}"
-    echo -e "  ${colour}${L2}${RESET}"
-    echo -e "  ${colour}${L3}${RESET}"
-    echo -e "  ${colour}${L4}${RESET}"
-    echo -e "  ${colour}${L5}${RESET}"
+    echo -e "${m}${colour}${TL}${rule}${TR}${RESET}"
+    echo -e "${m}${colour}${V}${empty}${V}${RESET}"
+    echo -e "${m}${colour}${V}${pad}${L1}${pad}${V}${RESET}"
+    echo -e "${m}${colour}${V}${pad}${L2}${pad}${V}${RESET}"
+    echo -e "${m}${colour}${V}${pad}${L3}${pad}${V}${RESET}"
+    echo -e "${m}${colour}${V}${pad}${L4}${pad}${V}${RESET}"
+    echo -e "${m}${colour}${V}${pad}${L5}${pad}${V}${RESET}"
+    if [[ -n "$pct_line" ]]; then
+        echo -e "${m}${colour}${V}${empty}${V}${RESET}"
+        echo -e "${m}${colour}${V}${pct_line}${V}${RESET}"
+    fi
+    echo -e "${m}${colour}${V}${empty}${V}${RESET}"
+    echo -e "${m}${colour}${BL}${rule}${BR}${RESET}"
     echo ""
 }
 
