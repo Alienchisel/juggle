@@ -42,6 +42,8 @@ STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_ac
 CODEX_FILE="$DATA_DIR/codex.csv"          # persistent discoveries: key,date
 CODEX_UNDO_MARK="$DATA_DIR/codex_undo_mark"         # codex line count before last trial (for undo)
 MILESTONE_UNDO_MARK="$DATA_DIR/milestone_undo_mark" # milestone line count before last trial (for undo)
+TITLE_UNDO_MARK="$DATA_DIR/title_undo_mark"         # title_state value before last trial (for undo)
+WITNESS_UNDO_MARK="$DATA_DIR/witness_undo_mark"     # witness_count value before last trial (for undo)
 WITNESS_FILE="$DATA_DIR/witness_count"    # number of times The Witness has spoken
 NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
 TITLE_STATE_FILE="$DATA_DIR/title_state"       # 1 if previous trial crossed a title threshold
@@ -575,11 +577,15 @@ log_score() {
     local pb
     pb=$(personal_best)
 
-    # Save pre-trial watermarks so undo can roll back any Codex/milestone entries added here
+    # Save pre-trial watermarks so undo can fully restore state
     local _codex_mark=0; [[ -s "$CODEX_FILE" ]] && _codex_mark=$(wc -l < "$CODEX_FILE")
     echo "$_codex_mark" > "$CODEX_UNDO_MARK"
     local _milestone_mark=0; [[ -s "$MILESTONE_FILE" ]] && _milestone_mark=$(wc -l < "$MILESTONE_FILE")
     echo "$_milestone_mark" > "$MILESTONE_UNDO_MARK"
+    local _ts=0; [[ -f "$TITLE_STATE_FILE" ]] && _ts=$(< "$TITLE_STATE_FILE")
+    echo "$_ts" > "$TITLE_UNDO_MARK"
+    local _wc=0; [[ -f "$WITNESS_FILE" ]] && _wc=$(< "$WITNESS_FILE")
+    echo "$_wc" > "$WITNESS_UNDO_MARK"
 
     echo "$today,$now,$catches" >> "$DATA_FILE"
 
@@ -3112,22 +3118,22 @@ undo_last() {
                 head -n -1 "$PB_FILE" > "$tmp" && mv "$tmp" "$PB_FILE"
             fi
         fi
-        # Recompute augury state from post-undo data
+        # Recompute all state from post-undo data
         local new_pb
         new_pb=$(personal_best)
+        local new_total
+        new_total=$(total_sessions)
+
+        # Spree — scan backwards for consecutive worthy trials (≥50% of PB)
         local new_spree=0
         if [[ -s "$DATA_FILE" ]] && (( new_pb > 0 )); then
             while IFS=',' read -r _ _ c; do
-                if (( c * 100 / new_pb >= 50 )); then
-                    (( new_spree++ ))
-                else
-                    break
-                fi
+                (( c * 100 / new_pb >= 50 )) && (( new_spree++ )) || break
             done < <(tac "$DATA_FILE")
         fi
+
+        # Dominance active — 5 of last 10 trials ≥80% of PB
         local new_dom=0
-        local new_total
-        new_total=$(total_sessions)
         if (( new_pb > 0 && new_total >= 10 )); then
             local dom_count
             dom_count=$(tail -n10 "$DATA_FILE" | awk -F',' -v pb="$new_pb" '
@@ -3136,13 +3142,61 @@ undo_last() {
             ')
             (( dom_count >= 5 )) && new_dom=1
         fi
+
+        # Dominance streak — consecutive trials dominance was active
+        local new_dom_streak=0
+        if (( new_dom && new_pb > 0 && new_total >= 10 )); then
+            local _ds_line=0
+            while (( _ds_line++ < new_total )); do
+                local _ds_chunk=$(( _ds_line > 10 ? 10 : _ds_line ))
+                local _ds_from=$(( new_total - _ds_line - _ds_chunk + 1 ))
+                (( _ds_from < 1 )) && break
+                local _ds_active
+                _ds_active=$(tail -n +"$_ds_from" "$DATA_FILE" | head -n "$_ds_chunk" | \
+                    awk -F',' -v pb="$new_pb" \
+                    '{ if ($3*100/pb>=80) c++ } END{ print (c+0>=5)?1:0 }')
+                (( _ds_active )) && (( new_dom_streak++ )) || break
+            done
+        fi
+        echo "$new_dom_streak" > "$DOMINANCE_STREAK_FILE"
+
+        # Chain peak
         local new_cur_streak new_streak_peak=0
         read -r new_cur_streak _ <<< "$(calc_streaks)"
         local st
         for st in 3 7 14 30 60 90 180 365 730; do
             (( new_cur_streak >= st )) && new_streak_peak=$st
         done
-        echo "${new_streak_peak},${new_spree},${new_dom}" > "$STREAK_FILE"
+
+        # Preserve spree_peak and echo_peak (all-time highs; don't decrease on undo)
+        local _old_spree_peak=0 _old_echo_peak=0
+        IFS=',' read -r _ _ _ _old_spree_peak _old_echo_peak < "$STREAK_FILE" 2>/dev/null
+        local _final_spree_peak=$(( new_spree > _old_spree_peak ? new_spree : _old_spree_peak ))
+        echo "${new_streak_peak},${new_spree},${new_dom},${_final_spree_peak},${_old_echo_peak}" > "$STREAK_FILE"
+
+        # Rolling average trend
+        local _new_avg_x10=-1
+        [[ -s "$DATA_FILE" ]] && _new_avg_x10=$(tail -20 "$DATA_FILE" | awk -F',' \
+            '{s+=$3; n++} END{print (n>=20 ? int(s/n*10) : -1)}')
+        (( _new_avg_x10 >= 0 )) && echo "${_new_avg_x10},0" > "$AVG_TREND_FILE"
+
+        # Nemesis — recompute most common sub-PB score
+        local _new_nem _new_nem_count
+        read -r _new_nem _new_nem_count <<< "$(awk -F',' -v pb="$new_pb" '
+            $3+0 < pb { count[$3+0]++ }
+            END {
+                best_c=0; best_s=0
+                for (s in count)
+                    if (count[s]>best_c || (count[s]==best_c && s+0>best_s+0))
+                        { best_c=count[s]; best_s=s }
+                printf "%d %d", best_s+0, best_c+0
+            }
+        ' "$DATA_FILE")"
+        (( _new_nem > 0 )) && echo "${_new_nem},${_new_nem_count}" > "$NEMESIS_FILE"
+
+        # Restore title_state and witness_count from pre-trial watermarks
+        [[ -f "$TITLE_UNDO_MARK" ]]   && { cat "$TITLE_UNDO_MARK"   > "$TITLE_STATE_FILE"; rm -f "$TITLE_UNDO_MARK"; }
+        [[ -f "$WITNESS_UNDO_MARK" ]] && { cat "$WITNESS_UNDO_MARK" > "$WITNESS_FILE";      rm -f "$WITNESS_UNDO_MARK"; }
 
         # Roll back any Codex entries added by the undone trial
         if [[ -f "$CODEX_UNDO_MARK" ]]; then
