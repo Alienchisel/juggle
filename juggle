@@ -2675,7 +2675,7 @@ show_day() {
     grade="${grade_info%%|*}"
     grade_colour="${grade_info##*|}"
 
-    echo ""
+    gum_header "IVGVLATOR"$'\n'"· DAY RECAP ·"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}DAY${RESET}  ${DIM}${target_date}${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -2710,6 +2710,20 @@ show_day() {
         echo ""
         echo -e "  ${DIM}${_gloss}${RESET}"
     fi
+
+    # Trial list
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local i=1
+    while IFS=',' read -r row_date row_time row_catches; do
+        local grade_info grade grade_colour
+        grade_info=$(get_grade "$row_catches" "$pb")
+        grade="${grade_info%%|*}"
+        grade_colour="${grade_info##*|}"
+        printf "  ${DIM}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${grade_colour}%-3s${RESET}\n" \
+            "$i" "$row_catches" "$row_time" "$grade"
+        (( i++ ))
+    done < <(awk -F',' -v d="$target_date" '$1 == d' "$DATA_FILE")
     echo ""
 }
 
@@ -3536,7 +3550,7 @@ case "$1" in
         show_trend | gum_pager
         ;;
     day)
-        show_day "$2"
+        show_day "$2" | gum_pager
         ;;
     week)
         show_week "$2"
