@@ -2811,7 +2811,7 @@ show_week() {
     local week_label
     week_label="$(date -d "$week_start" "+%b %-d") – $(date -d "$week_end" "+%b %-d, %Y")"
 
-    echo ""
+    gum_header "IVGVLATOR"$'\n'"· WEEK RECAP ·"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}WEEK${RESET}  ${DIM}${week_label}${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -2855,6 +2855,33 @@ show_week() {
         echo ""
         echo -e "  ${DIM}${_gloss}${RESET}"
     fi
+
+    # Per-day breakdown
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local d
+    for (( d=0; d<7; d++ )); do
+        local day_date day_name
+        day_date=$(date -d "$week_start +${d} days" +%Y-%m-%d)
+        day_name=$(date -d "$day_date" +%a)
+        local dc db
+        read -r dc db <<< "$(awk -F',' -v dt="$day_date" '
+            $1 == dt { n++; if ($3 > best) best=$3 }
+            END { printf "%d %d", n+0, best+0 }
+        ' "$DATA_FILE")"
+        if (( dc == 0 )); then
+            printf "  ${DIM}%-3s  %s  —${RESET}\n" "$day_name" "$day_date"
+        else
+            local dgrade_info dgrade dgrade_colour
+            dgrade_info=$(get_grade "$db" "$pb")
+            dgrade="${dgrade_info%%|*}"
+            dgrade_colour="${dgrade_info##*|}"
+            local trial_word="trials"
+            (( dc == 1 )) && trial_word="trial "
+            printf "  ${BOLD}%-3s${RESET}  ${DIM}%s${RESET}  %2d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  ${dgrade_colour}%-3s${RESET}\n" \
+                "$day_name" "$day_date" "$dc" "$db" "$dgrade"
+        fi
+    done
     echo ""
 }
 
@@ -3553,7 +3580,7 @@ case "$1" in
         show_day "$2" | gum_pager
         ;;
     week)
-        show_week "$2"
+        show_week "$2" | gum_pager
         ;;
     month)
         show_month "$2"
