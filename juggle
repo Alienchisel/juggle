@@ -361,7 +361,7 @@ print_grade() {
     local pct_line=""
     if (( pb > 0 )); then
         local pct=$(( catches * 100 / pb ))
-        local pstr="${pct}%"
+        local pstr="${pct}% of PB"
         local lp=$(( (inner - ${#pstr}) / 2 ))
         local rp=$(( inner - ${#pstr} - lp ))
         local sl sr; printf -v sl "%${lp}s" ""; printf -v sr "%${rp}s" ""
