@@ -2146,18 +2146,29 @@ show_apex() {
     local pb_count
     pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
     local skip=$(( limit > 0 && pb_count > limit ? pb_count - limit : 0 ))
-    local prev_val=0
     local i=0
 
-    [[ -z "$no_header" ]] && gum_header "IVGVLATOR"$'\n'"· APEX RECORD ·"
+    # Load visible entries into arrays
+    local -a _dates _times _vals
     while IFS=',' read -r ph_date ph_time ph_val; do
         (( i++ ))
-        (( i <= skip )) && prev_val=$ph_val && continue
+        (( i <= skip )) && continue
+        _dates+=("$ph_date")
+        _times+=("$ph_time")
+        _vals+=("$ph_val")
+    done < "$PB_FILE"
+
+    local n=${#_vals[@]}
+
+    [[ -z "$no_header" ]] && gum_header "IVGVLATOR"$'\n'"· APEX RECORD ·"
+    local j
+    for (( j=n-1; j>=0; j-- )); do
+        local ph_date="${_dates[$j]}" ph_time="${_times[$j]}" ph_val="${_vals[$j]}"
         local diff_str=""
-        if (( prev_val == 0 )); then
+        if (( j == 0 )); then
             diff_str="${DIM}start${RESET}"
         else
-            local d=$(( ph_val - prev_val ))
+            local d=$(( ph_val - _vals[j-1] ))
             diff_str="${GREEN}+${d}${RESET}"
         fi
         local grade_info grade grade_colour
@@ -2171,8 +2182,7 @@ show_apex() {
             printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}\n" \
                 "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
         fi
-        prev_val=$ph_val
-    done < "$PB_FILE"
+    done
     echo ""
 }
 
