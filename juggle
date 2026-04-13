@@ -40,6 +40,8 @@ MILESTONE_FILE="$DATA_DIR/milestones.csv"
 PB_FILE="$DATA_DIR/pb_history.csv"
 STREAK_FILE="$DATA_DIR/streak_state.csv"  # streak_peak,spree_count,dominance_active
 CODEX_FILE="$DATA_DIR/codex.csv"          # persistent discoveries: key,date
+CODEX_UNDO_MARK="$DATA_DIR/codex_undo_mark"         # codex line count before last trial (for undo)
+MILESTONE_UNDO_MARK="$DATA_DIR/milestone_undo_mark" # milestone line count before last trial (for undo)
 WITNESS_FILE="$DATA_DIR/witness_count"    # number of times The Witness has spoken
 NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
 TITLE_STATE_FILE="$DATA_DIR/title_state"       # 1 if previous trial crossed a title threshold
@@ -572,6 +574,12 @@ log_score() {
     now=$(date +%H:%M:%S)
     local pb
     pb=$(personal_best)
+
+    # Save pre-trial watermarks so undo can roll back any Codex/milestone entries added here
+    local _codex_mark=0; [[ -s "$CODEX_FILE" ]] && _codex_mark=$(wc -l < "$CODEX_FILE")
+    echo "$_codex_mark" > "$CODEX_UNDO_MARK"
+    local _milestone_mark=0; [[ -s "$MILESTONE_FILE" ]] && _milestone_mark=$(wc -l < "$MILESTONE_FILE")
+    echo "$_milestone_mark" > "$MILESTONE_UNDO_MARK"
 
     echo "$today,$now,$catches" >> "$DATA_FILE"
 
@@ -3135,6 +3143,31 @@ undo_last() {
             (( new_cur_streak >= st )) && new_streak_peak=$st
         done
         echo "${new_streak_peak},${new_spree},${new_dom}" > "$STREAK_FILE"
+
+        # Roll back any Codex entries added by the undone trial
+        if [[ -f "$CODEX_UNDO_MARK" ]]; then
+            local _cmark _ccur
+            _cmark=$(< "$CODEX_UNDO_MARK")
+            _ccur=$(wc -l < "$CODEX_FILE" 2>/dev/null || echo 0)
+            if (( _cmark < _ccur )); then
+                local _cremoved=$(( _ccur - _cmark ))
+                head -n "$_cmark" "$CODEX_FILE" > "${DATA_DIR}/.codex_tmp" && mv "${DATA_DIR}/.codex_tmp" "$CODEX_FILE"
+                local _cword; (( _cremoved == 1 )) && _cword="entry" || _cword="entries"
+                echo -e "  ${DIM}${_cremoved} Codex ${_cword} revoked.${RESET}"
+            fi
+            rm -f "$CODEX_UNDO_MARK"
+        fi
+
+        # Roll back any milestone entries added by the undone trial
+        if [[ -f "$MILESTONE_UNDO_MARK" ]]; then
+            local _mmark _mcur
+            _mmark=$(< "$MILESTONE_UNDO_MARK")
+            _mcur=$(wc -l < "$MILESTONE_FILE" 2>/dev/null || echo 0)
+            if (( _mmark < _mcur )); then
+                head -n "$_mmark" "$MILESTONE_FILE" > "${DATA_DIR}/.milestone_tmp" && mv "${DATA_DIR}/.milestone_tmp" "$MILESTONE_FILE"
+            fi
+            rm -f "$MILESTONE_UNDO_MARK"
+        fi
 
         echo -e "  ${GREEN}Entry removed.${RESET}"
     else
