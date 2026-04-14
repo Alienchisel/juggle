@@ -2695,6 +2695,7 @@ show_stats() {
     show_apex "$pb" no_header 10
 
     # ── Grade Distribution ────────────────────────────────────────────────────────
+    # Historical: stored grade at time of trial
     local gf=0 gd=0 gc=0 gb=0 ga=0 gs=0 gss=0 gsss=0
     read -r gf gd gc gb ga gs gss gsss <<< "$(awk -F',' '
         NF >= 4 {
@@ -2711,12 +2712,31 @@ show_stats() {
         END { printf "%d %d %d %d %d %d %d %d",
               gf+0, gd+0, gc+0, gb+0, ga+0, gs+0, gss+0, gsss+0 }
     ' "$DATA_FILE")"
+    # Current: graded against today's PB
+    local cf=0 cd=0 cc=0 cb=0 ca=0 cs=0 css=0 csss=0
+    read -r cf cd cc cb ca cs css csss <<< "$(awk -F',' -v pb="$pb" '
+        pb > 0 {
+            pct = $3 * 100 / pb
+            if      (pct >= 100) csss++
+            else if (pct >= 90)  css++
+            else if (pct >= 80)  cs++
+            else if (pct >= 65)  ca++
+            else if (pct >= 50)  cb++
+            else if (pct >= 35)  cc++
+            else if (pct >= 20)  cd++
+            else                 cf++
+        }
+        END { printf "%d %d %d %d %d %d %d %d",
+              cf+0, cd+0, cc+0, cb+0, ca+0, cs+0, css+0, csss+0 }
+    ' "$DATA_FILE")"
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}GRADE DISTRIBUTION${RESET}  ${DIM}· at time of trial${RESET}"
+    echo -e "  ${BOLD}GRADE DISTRIBUTION${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    printf "  ${DIM}F${RESET}:%-6d${RED}D${RESET}:%-6d${RED}C${RESET}:%-6d${CYAN}B${RESET}:%-6d${CYAN}A${RESET}:%-6d${GREEN}S${RESET}:%-6d${YELLOW}SS${RESET}:%-5d${YELLOW}${BOLD}SSS${RESET}:%d\n" \
-        "$gf" "$gd" "$gc" "$gb" "$ga" "$gs" "$gss" "$gsss"
+    printf "  ${DIM}%-12s${RESET}  ${DIM}F${RESET}:%-6d${RED}D${RESET}:%-6d${RED}C${RESET}:%-6d${CYAN}B${RESET}:%-6d${CYAN}A${RESET}:%-6d${GREEN}S${RESET}:%-6d${YELLOW}SS${RESET}:%-5d${YELLOW}${BOLD}SSS${RESET}:%d\n" \
+        "at log time" "$gf" "$gd" "$gc" "$gb" "$ga" "$gs" "$gss" "$gsss"
+    printf "  ${DIM}%-12s${RESET}  ${DIM}F${RESET}:%-6d${RED}D${RESET}:%-6d${RED}C${RESET}:%-6d${CYAN}B${RESET}:%-6d${CYAN}A${RESET}:%-6d${GREEN}S${RESET}:%-6d${YELLOW}SS${RESET}:%-5d${YELLOW}${BOLD}SSS${RESET}:%d\n" \
+        "vs cur PB" "$cf" "$cd" "$cc" "$cb" "$ca" "$cs" "$css" "$csss"
 
     # ── Trial Ledger ───────────────────────────────────────────────────────────
     echo ""
