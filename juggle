@@ -3467,7 +3467,7 @@ show_last() {
         # Display: hist→curr when they differ, single grade when same
         local grade_display
         if [[ "$hist_grade" != "$cur_grade" ]]; then
-            grade_display="${DIM}${hist_grade}${RESET}${DIM}→${RESET}${cur_colour}${cur_grade}${RESET}"
+            grade_display="${hist_colour}${hist_grade}${RESET}${DIM}→${RESET}${cur_colour}${cur_grade}${RESET}"
         else
             grade_display="${cur_colour}${cur_grade}${RESET}"
         fi
