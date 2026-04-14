@@ -308,6 +308,31 @@ get_grade() {
     echo "${grade}|${colour}"
 }
 
+# Returns the ANSI colour for a grade letter (stdout)
+grade_colour_for() {
+    case "$1" in
+        SSS) echo "${YELLOW}${BOLD}" ;;
+        SS)  echo "${YELLOW}" ;;
+        S)   echo "${GREEN}" ;;
+        A|B) echo "${CYAN}" ;;
+        C|D) echo "${RED}" ;;
+        *)   echo "${DIM}" ;;
+    esac
+}
+
+# Sets _gd to the grade display string: "hist→curr" when they differ, "curr" when same.
+# Usage: grade_pair_display <hist_grade> <cur_grade>
+grade_pair_display() {
+    local hg=$1 cg=$2 hc cc
+    hc=$(grade_colour_for "$hg")
+    cc=$(grade_colour_for "$cg")
+    if [[ "$hg" != "$cg" ]]; then
+        _gd="${hc}${hg}${RESET}${DIM}→${RESET}${cc}${cg}${RESET}"
+    else
+        _gd="${cc}${cg}${RESET}"
+    fi
+}
+
 print_grade() {
     local catches=$1 pb=$2
     local grade_info grade colour
@@ -2846,33 +2871,13 @@ show_day() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     local i=1
     while IFS=',' read -r row_date row_time row_catches row_stored_grade; do
-        local cur_grade_info cur_grade cur_colour
+        local cur_grade_info cur_grade
         cur_grade_info=$(get_grade "$row_catches" "$pb")
         cur_grade="${cur_grade_info%%|*}"
-        cur_colour="${cur_grade_info##*|}"
-        local hist_grade hist_colour
-        if [[ -n "$row_stored_grade" ]]; then
-            hist_grade="$row_stored_grade"
-            case "$hist_grade" in
-                SSS) hist_colour="${YELLOW}${BOLD}" ;;
-                SS)  hist_colour="${YELLOW}" ;;
-                S)   hist_colour="${GREEN}" ;;
-                A|B) hist_colour="${CYAN}" ;;
-                C|D) hist_colour="${RED}" ;;
-                *)   hist_colour="${DIM}" ;;
-            esac
-        else
-            hist_grade="$cur_grade"
-            hist_colour="$cur_colour"
-        fi
-        local grade_display
-        if [[ "$hist_grade" != "$cur_grade" ]]; then
-            grade_display="${hist_colour}${hist_grade}${RESET}${DIM}→${RESET}${cur_colour}${cur_grade}${RESET}"
-        else
-            grade_display="${cur_colour}${cur_grade}${RESET}"
-        fi
+        local hist_grade="${row_stored_grade:-$cur_grade}"
+        grade_pair_display "$hist_grade" "$cur_grade"
         printf "  ${DIM}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   %b\n" \
-            "$i" "$row_catches" "$row_time" "$grade_display"
+            "$i" "$row_catches" "$row_time" "$_gd"
         (( i++ ))
     done < <(awk -F',' -v d="$target_date" '$1 == d' "$DATA_FILE")
     echo ""
@@ -2954,10 +2959,14 @@ show_week() {
 
     local pb
     pb=$(personal_best)
-    local grade_info grade grade_colour
+    local grade_info w_cur_grade
     grade_info=$(get_grade "$w_best" "$pb")
-    grade="${grade_info%%|*}"
-    grade_colour="${grade_info##*|}"
+    w_cur_grade="${grade_info%%|*}"
+    local w_hist_grade
+    w_hist_grade=$(awk -F',' -v s="$week_start" -v e="$week_end" -v b="$w_best" \
+        '$1>=s && $1<=e && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+    grade_pair_display "${w_hist_grade:-$w_cur_grade}" "$w_cur_grade"
+    local w_grade_display="$_gd"
 
     local week_label
     week_label="$(date -d "$week_start" "+%b %-d") – $(date -d "$week_end" "+%b %-d, %Y")"
@@ -2968,7 +2977,7 @@ show_week() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${w_count}"
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of 7"
-    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${w_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${w_best} catches${RESET}  $(echo -e "$w_grade_display")"
     echo -e "  ${BOLD}Avg           :${RESET}  ${w_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${week_sign}"
     local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
     local -a _wk_vals=()
@@ -3049,14 +3058,16 @@ show_week() {
         if (( dc == 0 )); then
             printf "  ${DIM}%-3s  %s  —${RESET}\n" "$day_name" "$day_date"
         else
-            local dgrade_info dgrade dgrade_colour
+            local dgrade_info d_cur_grade d_hist_grade
             dgrade_info=$(get_grade "$db" "$pb")
-            dgrade="${dgrade_info%%|*}"
-            dgrade_colour="${dgrade_info##*|}"
+            d_cur_grade="${dgrade_info%%|*}"
+            d_hist_grade=$(awk -F',' -v d="$day_date" -v b="$db" \
+                '$1==d && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+            grade_pair_display "${d_hist_grade:-$d_cur_grade}" "$d_cur_grade"
             local trial_word="trials"
             (( dc == 1 )) && trial_word="trial "
-            printf "  ${BOLD}%-3s${RESET}  ${DIM}%s${RESET}  %2d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  ${dgrade_colour}%-3s${RESET}\n" \
-                "$day_name" "$day_date" "$dc" "$db" "$dgrade"
+            printf "  ${BOLD}%-3s${RESET}  ${DIM}%s${RESET}  %2d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  %b\n" \
+                "$day_name" "$day_date" "$dc" "$db" "$_gd"
         fi
     done
     echo ""
@@ -3132,10 +3143,14 @@ show_month() {
 
     local pb
     pb=$(personal_best)
-    local grade_info grade grade_colour
+    local grade_info m_cur_grade
     grade_info=$(get_grade "$m_best" "$pb")
-    grade="${grade_info%%|*}"
-    grade_colour="${grade_info##*|}"
+    m_cur_grade="${grade_info%%|*}"
+    local m_hist_grade
+    m_hist_grade=$(awk -F',' -v m="$target_month" -v b="$m_best" \
+        'substr($1,1,7)==m && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+    grade_pair_display "${m_hist_grade:-$m_cur_grade}" "$m_cur_grade"
+    local m_grade_display="$_gd"
 
     local month_label
     month_label=$(date -d "${target_month}-01" "+%B %Y")
@@ -3146,7 +3161,7 @@ show_month() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${m_count}"
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of ${days_in_month}"
-    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${m_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${m_best} catches${RESET}  $(echo -e "$m_grade_display")"
     echo -e "  ${BOLD}Avg           :${RESET}  ${m_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${month_sign}"
     local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
     local -A _mo_map=()
@@ -3230,14 +3245,16 @@ show_month() {
         if (( wc == 0 )); then
             printf "  ${DIM}%s  —${RESET}\n" "$w_label"
         else
-            local wgrade_info wgrade wgrade_colour
+            local wgrade_info w_cur_grade w_hist_grade
             wgrade_info=$(get_grade "$wb" "$pb")
-            wgrade="${wgrade_info%%|*}"
-            wgrade_colour="${wgrade_info##*|}"
+            w_cur_grade="${wgrade_info%%|*}"
+            w_hist_grade=$(awk -F',' -v s="$w_start" -v e="$w_end" -v b="$wb" \
+                '$1>=s && $1<=e && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+            grade_pair_display "${w_hist_grade:-$w_cur_grade}" "$w_cur_grade"
             local trial_word="trials"
             (( wc == 1 )) && trial_word="trial "
-            printf "  ${BOLD}%s${RESET}  %2d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  ${wgrade_colour}%-3s${RESET}\n" \
-                "$w_label" "$wc" "$wb" "$wgrade"
+            printf "  ${BOLD}%s${RESET}  %2d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  %b\n" \
+                "$w_label" "$wc" "$wb" "$_gd"
         fi
         w_start=$(date -d "$w_start +7 days" +%Y-%m-%d)
     done
@@ -3332,10 +3349,14 @@ show_year() {
 
     local pb
     pb=$(personal_best)
-    local grade_info grade grade_colour
+    local grade_info y_cur_grade
     grade_info=$(get_grade "$y_best" "$pb")
-    grade="${grade_info%%|*}"
-    grade_colour="${grade_info##*|}"
+    y_cur_grade="${grade_info%%|*}"
+    local y_hist_grade
+    y_hist_grade=$(awk -F',' -v y="$target_year" -v b="$y_best" \
+        'substr($1,1,4)==y && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+    grade_pair_display "${y_hist_grade:-$y_cur_grade}" "$y_cur_grade"
+    local y_grade_display="$_gd"
 
     gum_header "IVGVLATOR"$'\n'"· YEAR RECAP ·"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
@@ -3343,7 +3364,7 @@ show_year() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${y_count}"
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days}"
-    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${y_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${y_best} catches${RESET}  $(echo -e "$y_grade_display")"
     echo -e "  ${BOLD}Avg           :${RESET}  ${y_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${year_sign}"
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month_label}  ${DIM}(avg ${best_month_avg})${RESET}"
     local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
@@ -3405,14 +3426,16 @@ show_year() {
         if (( mc == 0 )); then
             printf "  ${DIM}%-9s  —${RESET}\n" "$month_name"
         else
-            local mgrade_info mgrade mgrade_colour
+            local mgrade_info m_cur_grade m_hist_grade
             mgrade_info=$(get_grade "$mb" "$pb")
-            mgrade="${mgrade_info%%|*}"
-            mgrade_colour="${mgrade_info##*|}"
+            m_cur_grade="${mgrade_info%%|*}"
+            m_hist_grade=$(awk -F',' -v mk="$month_key" -v b="$mb" \
+                'substr($1,1,7)==mk && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+            grade_pair_display "${m_hist_grade:-$m_cur_grade}" "$m_cur_grade"
             local trial_word="trials"
             (( mc == 1 )) && trial_word="trial "
-            printf "  ${BOLD}%-9s${RESET}  %3d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  ${mgrade_colour}%-3s${RESET}\n" \
-                "$month_name" "$mc" "$mb" "$mgrade"
+            printf "  ${BOLD}%-9s${RESET}  %3d ${DIM}${trial_word}${RESET}   ${BOLD}%3d catches${RESET}  %b\n" \
+                "$month_name" "$mc" "$mb" "$_gd"
         fi
     done
     echo ""
@@ -3451,36 +3474,13 @@ show_last() {
     fi
     local i=1
     while IFS=',' read -r row_date row_time row_catches row_stored_grade; do
-        # Current grade (against today's PB)
-        local cur_grade_info cur_grade cur_colour
+        local cur_grade_info cur_grade
         cur_grade_info=$(get_grade "$row_catches" "$pb")
         cur_grade="${cur_grade_info%%|*}"
-        cur_colour="${cur_grade_info##*|}"
-        # Historical grade (stored at time of trial)
-        local hist_grade hist_colour
-        if [[ -n "$row_stored_grade" ]]; then
-            hist_grade="$row_stored_grade"
-            case "$hist_grade" in
-                SSS) hist_colour="${YELLOW}${BOLD}" ;;
-                SS)  hist_colour="${YELLOW}" ;;
-                S)   hist_colour="${GREEN}" ;;
-                A|B) hist_colour="${CYAN}" ;;
-                C|D) hist_colour="${RED}" ;;
-                *)   hist_colour="${DIM}" ;;
-            esac
-        else
-            hist_grade="$cur_grade"
-            hist_colour="$cur_colour"
-        fi
-        # Display: hist→curr when they differ, single grade when same
-        local grade_display
-        if [[ "$hist_grade" != "$cur_grade" ]]; then
-            grade_display="${hist_colour}${hist_grade}${RESET}${DIM}→${RESET}${cur_colour}${cur_grade}${RESET}"
-        else
-            grade_display="${cur_colour}${cur_grade}${RESET}"
-        fi
+        local hist_grade="${row_stored_grade:-$cur_grade}"
+        grade_pair_display "$hist_grade" "$cur_grade"
         printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s  %s${RESET}   %b\n" \
-            "$i" "$row_catches" "$row_date" "$row_time" "$grade_display"
+            "$i" "$row_catches" "$row_date" "$row_time" "$_gd"
         (( i++ ))
     done < <(tail -n"$n" "$DATA_FILE" | tac)
     echo ""
