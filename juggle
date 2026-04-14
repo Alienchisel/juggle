@@ -2739,10 +2739,14 @@ show_day() {
     local pb
     pb=$(personal_best)
 
-    local grade_info grade grade_colour
+    local grade_info day_cur_grade
     grade_info=$(get_grade "$day_best" "$pb")
-    grade="${grade_info%%|*}"
-    grade_colour="${grade_info##*|}"
+    day_cur_grade="${grade_info%%|*}"
+    local day_hist_grade
+    day_hist_grade=$(awk -F',' -v d="$target_date" -v b="$day_best" \
+        '$1==d && $3==b && NF>=4 {print $4; exit}' "$DATA_FILE")
+    grade_pair_display "${day_hist_grade:-$day_cur_grade}" "$day_cur_grade"
+    local day_grade_display="$_gd"
 
     # vs yesterday
     local prev_date prev_count prev_avg day_sign=""
@@ -2768,7 +2772,7 @@ show_day() {
     echo -e "  ${BOLD}DAY${RESET}  ${DIM}${target_date}${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${day_count}"
-    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${day_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
+    echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${day_best} catches${RESET}  $(echo -e "$day_grade_display")"
     echo -e "  ${BOLD}Avg           :${RESET}  ${day_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}${day_sign}"
     local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
     local -a _day_sv=()
