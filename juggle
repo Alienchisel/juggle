@@ -2263,7 +2263,7 @@ show_stats() {
         }')
 
     local last_date last_time last_catches
-    IFS=',' read -r last_date last_time last_catches <<< "$(tail -n1 "$DATA_FILE")"
+    IFS=',' read -r last_date last_time last_catches _ <<< "$(tail -n1 "$DATA_FILE")"
 
     # Days since Apex
     local pb_date
@@ -2666,7 +2666,7 @@ show_stats() {
     local avg_pos=$(( avg_int * chart_width / max_val ))
     (( avg_pos >= chart_width )) && avg_pos=$(( chart_width - 1 ))
 
-    while IFS=',' read -r date _ val; do
+    while IFS=',' read -r date _ val _grade; do
         local bar_len=$(( val * chart_width / max_val ))
         (( val > 0 && bar_len < 1 )) && bar_len=1
 
@@ -2769,7 +2769,7 @@ show_day() {
     local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
     local -a _day_sv=()
     local _day_smin=999999 _day_smax=0
-    while IFS=',' read -r _ _ _sc; do
+    while IFS=',' read -r _ _ _sc _; do
         _day_sv+=("$_sc")
         (( _sc < _day_smin )) && _day_smin=$_sc
         (( _sc > _day_smax )) && _day_smax=$_sc
@@ -3477,7 +3477,7 @@ undo_last() {
         return
     fi
     local last_date last_time last_catches
-    IFS=',' read -r last_date last_time last_catches <<< "$(tail -n1 "$DATA_FILE")"
+    IFS=',' read -r last_date last_time last_catches _ <<< "$(tail -n1 "$DATA_FILE")"
     echo ""
     echo -e "  ${BOLD}Last entry:${RESET}  ${BOLD}${last_catches} catches${RESET}  ${DIM}(${last_date} ${last_time})${RESET}"
     if gum_confirm "Remove this entry?"; then
@@ -3501,7 +3501,7 @@ undo_last() {
         # Spree — scan backwards for consecutive worthy trials (≥50% of PB)
         local new_spree=0
         if [[ -s "$DATA_FILE" ]] && (( new_pb > 0 )); then
-            while IFS=',' read -r _ _ c; do
+            while IFS=',' read -r _ _ c _; do
                 (( c * 100 / new_pb >= 50 )) && (( new_spree++ )) || break
             done < <(tac "$DATA_FILE")
         fi
