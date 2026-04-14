@@ -3641,15 +3641,20 @@ show_last() {
         echo -e "  ${DIM}──────────────────────────────────────${RESET}"
         echo ""
     fi
-    local i=1
+    local i=1 _last_date=""
     while IFS=',' read -r row_date row_time row_catches row_stored_grade; do
+        if [[ "$row_date" != "$_last_date" ]]; then
+            [[ -n "$_last_date" ]] && echo ""
+            echo -e "  ${DIM}── ${row_date} ──────────────────────────────${RESET}"
+            _last_date="$row_date"
+        fi
         local cur_grade_info cur_grade
         cur_grade_info=$(get_grade "$row_catches" "$pb")
         cur_grade="${cur_grade_info%%|*}"
         local hist_grade="${row_stored_grade:-$cur_grade}"
         grade_pair_display "$hist_grade" "$cur_grade"
-        printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s  %s${RESET}   %b\n" \
-            "$i" "$row_catches" "$row_date" "$row_time" "$_gd"
+        printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   %b\n" \
+            "$i" "$row_catches" "$row_time" "$_gd"
         (( i++ ))
     done < <(tail -n"$n" "$DATA_FILE" | tac)
     echo ""
