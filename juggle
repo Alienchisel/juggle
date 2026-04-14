@@ -2564,16 +2564,16 @@ show_stats() {
 
     # ── Grade Distribution ────────────────────────────────────────────────────────
     local gf=0 gd=0 gc=0 gb=0 ga=0 gs=0 gss=0 gsss=0
-    read -r gf gd gc gb ga gs gss gsss <<< "$(awk -F',' -v pb="$pb" '
-        pb > 0 {
-            pct = $3 * 100 / pb
-            if      (pct >= 100) gsss++
-            else if (pct >= 90)  gss++
-            else if (pct >= 80)  gs++
-            else if (pct >= 65)  ga++
-            else if (pct >= 50)  gb++
-            else if (pct >= 35)  gc++
-            else if (pct >= 20)  gd++
+    read -r gf gd gc gb ga gs gss gsss <<< "$(awk -F',' '
+        NF >= 4 {
+            g = $4
+            if      (g == "SSS") gsss++
+            else if (g == "SS")  gss++
+            else if (g == "S")   gs++
+            else if (g == "A")   ga++
+            else if (g == "B")   gb++
+            else if (g == "C")   gc++
+            else if (g == "D")   gd++
             else                 gf++
         }
         END { printf "%d %d %d %d %d %d %d %d",
@@ -2581,7 +2581,7 @@ show_stats() {
     ' "$DATA_FILE")"
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}GRADE DISTRIBUTION${RESET}"
+    echo -e "  ${BOLD}GRADE DISTRIBUTION${RESET}  ${DIM}· at time of trial${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     printf "  ${DIM}F${RESET}:%-6d${RED}D${RESET}:%-6d${RED}C${RESET}:%-6d${CYAN}B${RESET}:%-6d${CYAN}A${RESET}:%-6d${GREEN}S${RESET}:%-6d${YELLOW}SS${RESET}:%-5d${YELLOW}${BOLD}SSS${RESET}:%d\n" \
         "$gf" "$gd" "$gc" "$gb" "$ga" "$gs" "$gss" "$gsss"
