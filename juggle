@@ -2462,10 +2462,12 @@ show_stats() {
     stats_grade_colour="${stats_grade_info##*|}"
     local active_days
     active_days=$(awk -F',' '!seen[$1]++ {n++} END {print n+0}' "$DATA_FILE")
+    local trials_per_day
+    trials_per_day=$(awk "BEGIN {printf \"%.1f\", ($total / ($active_days > 0 ? $active_days : 1))}")
     echo -e "  ${BOLD}Last trial    :${RESET}  ${last_catches} catches  ${DIM}(${last_date} ${last_time})${RESET}"
     echo -e "  ${BOLD}Last grade    :${RESET}  ${stats_grade_colour}${stats_grade}${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${total}"
-    echo -e "  ${BOLD}Active days   :${RESET}  ${active_days}"
+    echo -e "  ${BOLD}Active days   :${RESET}  ${active_days}  ${DIM}(${trials_per_day} trials/day)${RESET}"
     echo -e "  ${BOLD}Average       :${RESET}  ${avg} catches  ${DIM}(median: ${median})${RESET}"
     echo -e "  ${BOLD}Total catches :${RESET}  ${sum}"
     echo ""
