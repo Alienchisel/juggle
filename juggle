@@ -2276,6 +2276,14 @@ show_apex() {
 
     local n=${#_vals[@]}
 
+    # Precompute timestamps for days-stood calculation
+    local -a _tss=()
+    local _j
+    for (( _j=0; _j<n; _j++ )); do
+        _tss+=("$(date -d "${_dates[$_j]}" +%s)")
+    done
+    local _today_ts; _today_ts=$(date +%s)
+
     [[ -z "$no_header" ]] && gum_header "IVGVLATOR"$'\n'"· APEX RECORD ·"
     local j
     for (( j=n-1; j>=0; j-- )); do
@@ -2292,12 +2300,28 @@ show_apex() {
         grade_info=$(get_grade "$ph_val" "$pb")
         grade="${grade_info%%|*}"
         grade_colour="${grade_info##*|}"
-        if (( ph_val == pb )); then
-            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}  ${BLOOD}${BOLD}Sine pari.${RESET}\n" \
-                "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
+        local _stood_days _stood_str
+        if (( j == n-1 )); then
+            _stood_days=$(( (_today_ts - _tss[j]) / 86400 ))
+            if (( _stood_days == 0 )); then
+                _stood_str="${DIM}set today${RESET}"
+            else
+                _stood_str="${DIM}${_stood_days}d standing${RESET}"
+            fi
         else
-            printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}\n" \
-                "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade"
+            _stood_days=$(( (_tss[j+1] - _tss[j]) / 86400 ))
+            if (( _stood_days == 0 )); then
+                _stood_str="${DIM}<1d${RESET}"
+            else
+                _stood_str="${DIM}${_stood_days}d${RESET}"
+            fi
+        fi
+        if (( ph_val == pb )); then
+            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}  %b  ${BLOOD}${BOLD}Sine pari.${RESET}\n" \
+                "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade" "$_stood_str"
+        else
+            printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}  %b\n" \
+                "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade" "$_stood_str"
         fi
     done
     echo ""
