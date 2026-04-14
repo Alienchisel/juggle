@@ -2783,12 +2783,40 @@ show_day() {
         (( _sc > _day_smax )) && _day_smax=$_sc
     done < <(awk -F',' -v d="$target_date" '$1==d' "$DATA_FILE")
     if (( ${#_day_sv[@]} >= 2 )); then
-        local _day_srange=$(( _day_smax - _day_smin ))
+        # Downsample to at most 60 chars by bucketing into groups
+        local _day_spark_width=60
+        local _day_n=${#_day_sv[@]}
+        local -a _day_buckets=()
+        local _b
+        for (( _b=0; _b<_day_spark_width; _b++ )); do
+            local _bstart=$(( _b * _day_n / _day_spark_width ))
+            local _bend=$(( (_b + 1) * _day_n / _day_spark_width ))
+            (( _bend > _day_n )) && _bend=$_day_n
+            (( _bend <= _bstart )) && { _day_buckets+=(""); continue; }
+            local _bmax=0
+            local _bi
+            for (( _bi=_bstart; _bi<_bend; _bi++ )); do
+                (( ${_day_sv[$_bi]} > _bmax )) && _bmax=${_day_sv[$_bi]}
+            done
+            _day_buckets+=("$_bmax")
+        done
+        # Recompute min/max over buckets
+        local _day_bmin=999999 _day_bmax=0
+        for _sc in "${_day_buckets[@]}"; do
+            [[ -z "$_sc" ]] && continue
+            (( _sc < _day_bmin )) && _day_bmin=$_sc
+            (( _sc > _day_bmax )) && _day_bmax=$_sc
+        done
+        local _day_srange=$(( _day_bmax - _day_bmin ))
         local _day_sparkline=""
-        for _sc in "${_day_sv[@]}"; do
+        for _sc in "${_day_buckets[@]}"; do
+            if [[ -z "$_sc" ]]; then
+                _day_sparkline+=" "
+                continue
+            fi
             local _day_idx
             if (( _day_srange == 0 )); then _day_idx=3
-            else _day_idx=$(( (_sc - _day_smin) * 7 / _day_srange ))
+            else _day_idx=$(( (_sc - _day_bmin) * 7 / _day_srange ))
             fi
             _day_sparkline+="${_spark_chars[$_day_idx]}"
         done
