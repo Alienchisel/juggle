@@ -712,6 +712,18 @@ log_score() {
         echo -e "  #${BOLD}${rank}${RESET} of ${total} — top ${top_pct}%."
     fi
 
+    # Recent form indicator — compare to avg of last 10 trials before this one
+    if (( total > 10 )); then
+        local _form_avg
+        _form_avg=$(head -n -1 "$DATA_FILE" | tail -n10 | awk -F',' \
+            '{s+=$3; n++} END {printf "%.1f", (n>0?s/n:0)}')
+        if awk "BEGIN {exit !($catches > $_form_avg)}"; then
+            echo -e "  ${GREEN}▲ above recent form.${RESET}"
+        elif awk "BEGIN {exit !($catches < $_form_avg)}"; then
+            echo -e "  ${RED}▼ below recent form.${RESET}"
+        fi
+    fi
+
     # Nemesis match — fire occasionally (1 in 3) when score equals current Nemesis
     local _nem_score=0
     IFS=',' read -r _nem_score _ < "$NEMESIS_FILE" 2>/dev/null
