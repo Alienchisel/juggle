@@ -2551,10 +2551,14 @@ show_stats() {
         if [[ "$1" == "$2" ]]; then echo "${DIM}best: same${RESET}"
         else echo "${DIM}best: $3  avg $4${RESET}"; fi
     }
-    echo -e "  ${BOLD}Day  ${RESET}  ${today}        ${today_count} trials   avg ${today_avg}   $(_pbest "$today" "$best_day_date" "$best_day_date" "$best_day_avg")"
-    echo -e "  ${BOLD}Week ${RESET}  ${week_label}   ${this_week_sessions} trials   avg ${this_week_avg}   $(_pbest "$week_start" "$best_week_key" "$best_week_label" "$best_week_avg")"
-    echo -e "  ${BOLD}Month${RESET}  ${this_month}          ${month_sessions} trials   avg ${month_avg}   $(_pbest "$this_month" "$best_month" "$best_month" "$best_month_avg")"
-    echo -e "  ${BOLD}Year ${RESET}  ${this_year}              ${year_count} trials   avg ${year_avg}   $(_pbest "$this_year" "$best_year" "$best_year" "$best_year_avg")"
+    printf "  ${BOLD}%-5s${RESET}  %-15s  %4d trials  avg %-5s  %b\n" \
+        "Day"   "$today"      "$today_count"        "$today_avg"      "$(_pbest "$today"      "$best_day_date"  "$best_day_date"   "$best_day_avg")"
+    printf "  ${BOLD}%-5s${RESET}  %-15s  %4d trials  avg %-5s  %b\n" \
+        "Week"  "$week_label" "$this_week_sessions" "$this_week_avg"  "$(_pbest "$week_start" "$best_week_key"  "$best_week_label" "$best_week_avg")"
+    printf "  ${BOLD}%-5s${RESET}  %-15s  %4d trials  avg %-5s  %b\n" \
+        "Month" "$this_month" "$month_sessions"     "$month_avg"      "$(_pbest "$this_month" "$best_month"     "$best_month"      "$best_month_avg")"
+    printf "  ${BOLD}%-5s${RESET}  %-15s  %4d trials  avg %-5s  %b\n" \
+        "Year"  "$this_year"  "$year_count"         "$year_avg"       "$(_pbest "$this_year"  "$best_year"      "$best_year"       "$best_year_avg")"
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}FORM${RESET}"
