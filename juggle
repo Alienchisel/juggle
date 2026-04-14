@@ -1798,58 +1798,34 @@ show_scores() {
         echo -e "  ${DIM}──────────────────────────────────────${RESET}"
         local i=1
         while IFS=',' read -r date time catches stored_grade; do
-            if [[ -n "$stored_grade" ]]; then
-                case "$stored_grade" in
-                    SSS) _g="SSS"; _gc="${YELLOW}${BOLD}" ;;
-                    SS)  _g="SS";  _gc="${YELLOW}" ;;
-                    S)   _g="S";   _gc="${GREEN}" ;;
-                    A)   _g="A";   _gc="${CYAN}" ;;
-                    B)   _g="B";   _gc="${CYAN}" ;;
-                    C)   _g="C";   _gc="${RED}" ;;
-                    D)   _g="D";   _gc="${RED}" ;;
-                    *)   _g="F";   _gc="${DIM}" ;;
-                esac
-            else
-                _grd "$catches"
-            fi
+            _grd "$catches"
+            grade_pair_display "${stored_grade:-$_g}" "$_g"
             if (( i == 1 )); then
-                printf "  ${YELLOW}${BOLD}%4d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
-                    "$i" "$catches" "$date" "$_g"
+                printf "  ${YELLOW}${BOLD}%4d.  %3d catches   %s${RESET}   %b\n" \
+                    "$i" "$catches" "$date" "$_gd"
             elif (( i <= 3 )); then
-                printf "  ${CYAN}${BOLD}%4d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
-                    "$i" "$catches" "$date" "$_g"
+                printf "  ${CYAN}${BOLD}%4d.  %3d catches   %s${RESET}   %b\n" \
+                    "$i" "$catches" "$date" "$_gd"
             else
-                printf "  ${DIM}%4d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${_gc}%-3s${RESET}\n" \
-                    "$i" "$catches" "$date" "$_g"
+                printf "  ${DIM}%4d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   %b\n" \
+                    "$i" "$catches" "$date" "$_gd"
             fi
             (( i++ ))
         done < <(all_scores_sorted)
     else
         local i=1
         while IFS=',' read -r date time catches stored_grade; do
-            if [[ -n "$stored_grade" ]]; then
-                case "$stored_grade" in
-                    SSS) _g="SSS"; _gc="${YELLOW}${BOLD}" ;;
-                    SS)  _g="SS";  _gc="${YELLOW}" ;;
-                    S)   _g="S";   _gc="${GREEN}" ;;
-                    A)   _g="A";   _gc="${CYAN}" ;;
-                    B)   _g="B";   _gc="${CYAN}" ;;
-                    C)   _g="C";   _gc="${RED}" ;;
-                    D)   _g="D";   _gc="${RED}" ;;
-                    *)   _g="F";   _gc="${DIM}" ;;
-                esac
-            else
-                _grd "$catches"
-            fi
+            _grd "$catches"
+            grade_pair_display "${stored_grade:-$_g}" "$_g"
             if (( i == 1 )); then
-                printf "  ${YELLOW}${BOLD}%3d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
-                    "$i" "$catches" "$date" "$_g"
+                printf "  ${YELLOW}${BOLD}%3d.  %3d catches   %s${RESET}   %b\n" \
+                    "$i" "$catches" "$date" "$_gd"
             elif (( i <= 3 )); then
-                printf "  ${CYAN}${BOLD}%3d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
-                    "$i" "$catches" "$date" "$_g"
+                printf "  ${CYAN}${BOLD}%3d.  %3d catches   %s${RESET}   %b\n" \
+                    "$i" "$catches" "$date" "$_gd"
             else
-                printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${_gc}%-3s${RESET}\n" \
-                    "$i" "$catches" "$date" "$_g"
+                printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   %b\n" \
+                    "$i" "$catches" "$date" "$_gd"
             fi
             (( i++ ))
             if [[ "$limit" != "all" ]] && (( i > limit )); then
