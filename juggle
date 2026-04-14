@@ -2469,8 +2469,11 @@ show_stats() {
     read -r best_day_date best_day_count best_day_avg <<< "$(awk -F',' '
         { cnt[$1]++; sum[$1]+=$3 }
         END {
-            best=0; bd=""
-            for (d in cnt) if (cnt[d] > best) { best=cnt[d]; bd=d }
+            best_avg=0; bd=""
+            for (d in cnt) {
+                a = sum[d] / cnt[d]
+                if (a > best_avg) { best_avg=a; bd=d }
+            }
             printf "%s %d %.1f", bd, cnt[bd]+0, (cnt[bd]>0 ? sum[bd]/cnt[bd] : 0)
         }
     ' "$DATA_FILE")"
