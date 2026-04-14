@@ -3373,6 +3373,20 @@ show_last() {
     (( n == 1 )) && _title="RECENT TRIAL" || _title="RECENT TRIALS"
     gum_header "IVGVLATOR"$'\n'"· ${_title} ·"
     echo ""
+    if (( n > 1 )); then
+        local _sum_best _sum_avg
+        read -r _sum_best _sum_avg <<< "$(tail -n"$n" "$DATA_FILE" | awk -F',' '
+            { s+=$3; if ($3>best) best=$3; c++ }
+            END { printf "%d %.1f", best+0, (c>0?s/c:0) }
+        ')"
+        local _sum_grade_info _sum_grade _sum_gc
+        _sum_grade_info=$(get_grade "$_sum_best" "$pb")
+        _sum_grade="${_sum_grade_info%%|*}"
+        _sum_gc="${_sum_grade_info##*|}"
+        echo -e "  ${DIM}last ${n} trials  ·  best ${RESET}${BOLD}${_sum_best}${RESET}  ${_sum_gc}${_sum_grade}${RESET}  ${DIM}·  avg ${_sum_avg}${RESET}"
+        echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+        echo ""
+    fi
     local i=1
     while IFS=',' read -r row_date row_time row_catches; do
         local grade_info grade colour
