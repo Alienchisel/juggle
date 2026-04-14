@@ -2664,16 +2664,20 @@ show_stats() {
 
     # Chain
     if (( cur_streak >= 2 )); then
-        echo -e "  ${BOLD}Chain      :${RESET}  ${GREEN}${cur_streak} day(s)${RESET}  ${DIM}(best: ${best_streak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${GREEN}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Chain      :" "${cur_streak} day(s)" "$best_streak"
     else
-        echo -e "  ${BOLD}Chain      :${RESET}  ${DIM}inactive  (best: ${best_streak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${DIM}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Chain      :" "inactive" "$best_streak"
     fi
 
     # Spree
     if (( aug_spree_count >= 3 )); then
-        echo -e "  ${BOLD}Spree      :${RESET}  ${CYAN}${aug_spree_count} worthy trial(s)${RESET}  ${DIM}(best: ${display_spree_peak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${CYAN}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Spree      :" "${aug_spree_count} trials" "$display_spree_peak"
     else
-        echo -e "  ${BOLD}Spree      :${RESET}  ${DIM}inactive  (best: ${display_spree_peak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${DIM}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Spree      :" "inactive" "$display_spree_peak"
     fi
 
     # Dominance
@@ -2681,16 +2685,20 @@ show_stats() {
     IFS=',' read -r aug_dom_streak aug_dom_streak_peak < <(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo "0,0")
     local display_dom_peak=$(( aug_dom_streak > aug_dom_streak_peak ? aug_dom_streak : aug_dom_streak_peak ))
     if (( aug_dom_active )); then
-        echo -e "  ${BOLD}Dominance  :${RESET}  ${YELLOW}active — ${aug_dom_streak} trial(s)${RESET}  ${DIM}(best: ${display_dom_peak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${YELLOW}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Dominance  :" "${aug_dom_streak} trials" "$display_dom_peak"
     else
-        echo -e "  ${BOLD}Dominance  :${RESET}  ${DIM}inactive  (best: ${display_dom_peak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${DIM}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Dominance  :" "inactive" "$display_dom_peak"
     fi
 
     # Echo
     if (( aug_echo_count >= 3 )); then
-        echo -e "  ${BOLD}Echo       :${RESET}  ${MAGENTA}${aug_echo_count} times${RESET}  ${DIM}(best: ${display_echo_peak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${MAGENTA}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Echo       :" "${aug_echo_count} times" "$display_echo_peak"
     else
-        echo -e "  ${BOLD}Echo       :${RESET}  ${DIM}inactive  (best: ${display_echo_peak})${RESET}"
+        printf "  ${BOLD}%-12s${RESET}  ${DIM}%-14s${RESET}  ${DIM}(best: %s)${RESET}\n" \
+            "Echo       :" "inactive" "$display_echo_peak"
     fi
 
     # ── Titles ────────────────────────────────────────────────────────────────
