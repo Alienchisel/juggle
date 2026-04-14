@@ -734,11 +734,11 @@ log_score() {
         echo -e "  ${DIM}Session: ${_ses_count} trials  ·  avg ${_ses_avg}  ·  best ${_ses_best}${RESET}"
     fi
 
-    # Streak personal best callout
+    # Streak personal best callout — day 2 only (day 3+ is covered by the Augury line)
     local _log_cur_streak _log_best_streak
     read -r _log_cur_streak _log_best_streak <<< "$(calc_streaks)"
-    if (( _log_cur_streak >= 2 && _log_cur_streak == _log_best_streak )); then
-        echo -e "  ${CYAN}Chain at ${_log_cur_streak} — the longest it has run.${RESET}"
+    if (( _log_cur_streak == 2 && _log_cur_streak == _log_best_streak )); then
+        echo -e "  ${CYAN}Chain at 2 — the longest it has run.${RESET}"
     fi
 
     # Nemesis match — fire occasionally (1 in 3) when score equals current Nemesis
@@ -762,12 +762,18 @@ log_score() {
     # ── Augury line ────────────────────────────────────────────────────────────
     local _sp _sc _da _spk _epk
     IFS=',' read -r _sp _sc _da _spk _epk < "$STREAK_FILE"
-    local _cur_streak
-    read -r _cur_streak _ <<< "$(calc_streaks)"
+    local _cur_streak _best_streak
+    read -r _cur_streak _best_streak <<< "$(calc_streaks)"
     local _echo_count
     _echo_count=$(echo_count "$display_pb")
     local _aug_parts=()
-    (( _cur_streak >= 3      )) && _aug_parts+=("Chain at ${_cur_streak}.")
+    if (( _cur_streak >= 3 )); then
+        if (( _cur_streak == _best_streak )); then
+            _aug_parts+=("Chain at ${_cur_streak} — streak PB.")
+        else
+            _aug_parts+=("Chain at ${_cur_streak}.")
+        fi
+    fi
     (( ${_sc:-0} >= 3        )) && _aug_parts+=("Spree at ${_sc}.")
     (( ${_da:-0}             )) && _aug_parts+=("Dominance.")
     (( _echo_count >= 3      )) && _aug_parts+=("Echo.")
