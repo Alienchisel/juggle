@@ -104,7 +104,12 @@ init_data() {
     [[ ! -f "$WITNESS_FILE" ]] && echo "0" > "$WITNESS_FILE"
     [[ ! -f "$NEMESIS_FILE" ]] && echo "0,0" > "$NEMESIS_FILE"
     [[ ! -f "$TITLE_STATE_FILE" ]] && echo "0" > "$TITLE_STATE_FILE"
-    [[ ! -f "$DOMINANCE_STREAK_FILE" ]] && echo "0" > "$DOMINANCE_STREAK_FILE"
+    if [[ ! -f "$DOMINANCE_STREAK_FILE" ]]; then
+        echo "0,0" > "$DOMINANCE_STREAK_FILE"
+    elif [[ $(awk -F',' '{print NF; exit}' "$DOMINANCE_STREAK_FILE") == "1" ]]; then
+        local _dsv; _dsv=$(cat "$DOMINANCE_STREAK_FILE")
+        echo "${_dsv},${_dsv}" > "$DOMINANCE_STREAK_FILE"
+    fi
     [[ ! -f "$AVG_TREND_FILE" ]] && echo "0,0" > "$AVG_TREND_FILE"
 
     # Migrate scores.csv from date,catches → date,time,catches
@@ -766,6 +771,8 @@ log_score() {
     read -r _cur_streak _best_streak <<< "$(calc_streaks)"
     local _echo_count
     _echo_count=$(echo_count "$display_pb")
+    local _aug_dom_streak=0 _aug_dom_streak_peak=0
+    IFS=',' read -r _aug_dom_streak _aug_dom_streak_peak < <(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo "0,0")
     local _aug_parts=()
     if (( _cur_streak >= 3 )); then
         if (( _cur_streak == _best_streak )); then
@@ -781,7 +788,13 @@ log_score() {
             _aug_parts+=("Spree at ${_sc}.")
         fi
     fi
-    (( ${_da:-0}             )) && _aug_parts+=("Dominance.")
+    if (( ${_da:-0} )); then
+        if (( _aug_dom_streak == _aug_dom_streak_peak && _aug_dom_streak >= 1 )); then
+            _aug_parts+=("Dominance — ${_aug_dom_streak}, PB.")
+        else
+            _aug_parts+=("Dominance — ${_aug_dom_streak}.")
+        fi
+    fi
     if (( _echo_count >= 3 )); then
         if (( _echo_count == ${_epk:-0} )); then
             _aug_parts+=("Echo — ${_echo_count}, PB.")
@@ -842,7 +855,7 @@ log_score() {
     # Approaching: Dominance streak → UNRELENTING (10)
     if ! codex_discovered "UNRELENTING"; then
         local _dom_streak=0
-        [[ -f "$DOMINANCE_STREAK_FILE" ]] && _dom_streak=$(cat "$DOMINANCE_STREAK_FILE")
+        [[ -f "$DOMINANCE_STREAK_FILE" ]] && _dom_streak=$(cut -d',' -f1 "$DOMINANCE_STREAK_FILE")
         if (( _dom_streak >= 7 && _dom_streak < 10 )); then
             _context_msgs+=("The Unrelenting nears.")
         fi
@@ -1012,14 +1025,16 @@ check_milestones() {
     echo "${streak_peak},${spree_count},${dominance_active},${spree_peak},${echo_peak}" > "$STREAK_FILE"
 
     # Dominance streak
-    local dom_streak
-    dom_streak=$(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo 0)
+    local dom_streak dom_streak_peak
+    IFS=',' read -r dom_streak dom_streak_peak < <(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo "0,0")
+    dom_streak=${dom_streak:-0}; dom_streak_peak=${dom_streak_peak:-0}
     if (( dominance_active )); then
         (( dom_streak++ ))
     else
         dom_streak=0
     fi
-    echo "$dom_streak" > "$DOMINANCE_STREAK_FILE"
+    (( dom_streak > dom_streak_peak )) && dom_streak_peak=$dom_streak
+    echo "${dom_streak},${dom_streak_peak}" > "$DOMINANCE_STREAK_FILE"
 
     # The Thirty — 30-day chain
     if ! codex_discovered "THIRTY" && (( cur_streak >= 30 )); then
@@ -2662,10 +2677,13 @@ show_stats() {
     fi
 
     # Dominance
+    local aug_dom_streak=0 aug_dom_streak_peak=0
+    IFS=',' read -r aug_dom_streak aug_dom_streak_peak < <(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo "0,0")
+    local display_dom_peak=$(( aug_dom_streak > aug_dom_streak_peak ? aug_dom_streak : aug_dom_streak_peak ))
     if (( aug_dom_active )); then
-        echo -e "  ${BOLD}Dominance  :${RESET}  ${YELLOW}active${RESET}"
+        echo -e "  ${BOLD}Dominance  :${RESET}  ${YELLOW}active — ${aug_dom_streak} trial(s)${RESET}  ${DIM}(best: ${display_dom_peak})${RESET}"
     else
-        echo -e "  ${BOLD}Dominance  :${RESET}  ${DIM}inactive${RESET}"
+        echo -e "  ${BOLD}Dominance  :${RESET}  ${DIM}inactive  (best: ${display_dom_peak})${RESET}"
     fi
 
     # Echo
@@ -3750,6 +3768,9 @@ undo_last() {
         fi
 
         # Dominance streak — consecutive trials dominance was active
+        local _old_dom_peak=0
+        IFS=',' read -r _ _old_dom_peak < <(cat "$DOMINANCE_STREAK_FILE" 2>/dev/null || echo "0,0")
+        _old_dom_peak=${_old_dom_peak:-0}
         local new_dom_streak=0
         if (( new_dom && new_pb > 0 && new_total >= 10 )); then
             local _ds_line=0
@@ -3764,7 +3785,8 @@ undo_last() {
                 (( _ds_active )) && (( new_dom_streak++ )) || break
             done
         fi
-        echo "$new_dom_streak" > "$DOMINANCE_STREAK_FILE"
+        local _new_dom_peak=$(( new_dom_streak > _old_dom_peak ? new_dom_streak : _old_dom_peak ))
+        echo "${new_dom_streak},${_new_dom_peak}" > "$DOMINANCE_STREAK_FILE"
 
         # Chain peak
         local new_cur_streak new_streak_peak=0
