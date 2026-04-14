@@ -587,7 +587,22 @@ log_score() {
     local _wc=0; [[ -f "$WITNESS_FILE" ]] && _wc=$(< "$WITNESS_FILE")
     echo "$_wc" > "$WITNESS_UNDO_MARK"
 
-    echo "$today,$now,$catches" >> "$DATA_FILE"
+    local _store_grade
+    if (( pb == 0 || catches > pb )); then
+        _store_grade="SSS"
+    else
+        local _sg_pct=$(( catches * 100 / pb ))
+        if   (( _sg_pct >= 100 )); then _store_grade="SSS"
+        elif (( _sg_pct >= 90  )); then _store_grade="SS"
+        elif (( _sg_pct >= 80  )); then _store_grade="S"
+        elif (( _sg_pct >= 65  )); then _store_grade="A"
+        elif (( _sg_pct >= 50  )); then _store_grade="B"
+        elif (( _sg_pct >= 35  )); then _store_grade="C"
+        elif (( _sg_pct >= 20  )); then _store_grade="D"
+        else                            _store_grade="F"
+        fi
+    fi
+    echo "$today,$now,$catches,$_store_grade" >> "$DATA_FILE"
 
     if (( catches > pb )); then
         update_pb_history "$catches" "$today" "$now"
@@ -1757,8 +1772,21 @@ show_scores() {
         echo -e "  ${DIM}Full record — best first${RESET}"
         echo -e "  ${DIM}──────────────────────────────────────${RESET}"
         local i=1
-        while IFS=',' read -r date time catches; do
-            _grd "$catches"
+        while IFS=',' read -r date time catches stored_grade; do
+            if [[ -n "$stored_grade" ]]; then
+                case "$stored_grade" in
+                    SSS) _g="SSS"; _gc="${YELLOW}${BOLD}" ;;
+                    SS)  _g="SS";  _gc="${YELLOW}" ;;
+                    S)   _g="S";   _gc="${GREEN}" ;;
+                    A)   _g="A";   _gc="${CYAN}" ;;
+                    B)   _g="B";   _gc="${CYAN}" ;;
+                    C)   _g="C";   _gc="${RED}" ;;
+                    D)   _g="D";   _gc="${RED}" ;;
+                    *)   _g="F";   _gc="${DIM}" ;;
+                esac
+            else
+                _grd "$catches"
+            fi
             if (( i == 1 )); then
                 printf "  ${YELLOW}${BOLD}%4d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
                     "$i" "$catches" "$date" "$_g"
@@ -1773,8 +1801,21 @@ show_scores() {
         done < <(all_scores_sorted)
     else
         local i=1
-        while IFS=',' read -r date time catches; do
-            _grd "$catches"
+        while IFS=',' read -r date time catches stored_grade; do
+            if [[ -n "$stored_grade" ]]; then
+                case "$stored_grade" in
+                    SSS) _g="SSS"; _gc="${YELLOW}${BOLD}" ;;
+                    SS)  _g="SS";  _gc="${YELLOW}" ;;
+                    S)   _g="S";   _gc="${GREEN}" ;;
+                    A)   _g="A";   _gc="${CYAN}" ;;
+                    B)   _g="B";   _gc="${CYAN}" ;;
+                    C)   _g="C";   _gc="${RED}" ;;
+                    D)   _g="D";   _gc="${RED}" ;;
+                    *)   _g="F";   _gc="${DIM}" ;;
+                esac
+            else
+                _grd "$catches"
+            fi
             if (( i == 1 )); then
                 printf "  ${YELLOW}${BOLD}%3d.  %3d catches   %s${RESET}   ${_gc}${BOLD}%-3s${RESET}\n" \
                     "$i" "$catches" "$date" "$_g"
@@ -2804,11 +2845,24 @@ show_day() {
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     local i=1
-    while IFS=',' read -r row_date row_time row_catches; do
-        local grade_info grade grade_colour
-        grade_info=$(get_grade "$row_catches" "$pb")
-        grade="${grade_info%%|*}"
-        grade_colour="${grade_info##*|}"
+    while IFS=',' read -r row_date row_time row_catches row_stored_grade; do
+        local grade grade_colour
+        if [[ -n "$row_stored_grade" ]]; then
+            grade="$row_stored_grade"
+            case "$grade" in
+                SSS) grade_colour="${YELLOW}${BOLD}" ;;
+                SS)  grade_colour="${YELLOW}" ;;
+                S)   grade_colour="${GREEN}" ;;
+                A|B) grade_colour="${CYAN}" ;;
+                C|D) grade_colour="${RED}" ;;
+                *)   grade_colour="${DIM}" ;;
+            esac
+        else
+            local grade_info
+            grade_info=$(get_grade "$row_catches" "$pb")
+            grade="${grade_info%%|*}"
+            grade_colour="${grade_info##*|}"
+        fi
         printf "  ${DIM}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${grade_colour}%-3s${RESET}\n" \
             "$i" "$row_catches" "$row_time" "$grade"
         (( i++ ))
@@ -3388,11 +3442,24 @@ show_last() {
         echo ""
     fi
     local i=1
-    while IFS=',' read -r row_date row_time row_catches; do
-        local grade_info grade colour
-        grade_info=$(get_grade "$row_catches" "$pb")
-        grade="${grade_info%%|*}"
-        colour="${grade_info##*|}"
+    while IFS=',' read -r row_date row_time row_catches row_stored_grade; do
+        local grade colour
+        if [[ -n "$row_stored_grade" ]]; then
+            grade="$row_stored_grade"
+            case "$grade" in
+                SSS) colour="${YELLOW}${BOLD}" ;;
+                SS)  colour="${YELLOW}" ;;
+                S)   colour="${GREEN}" ;;
+                A|B) colour="${CYAN}" ;;
+                C|D) colour="${RED}" ;;
+                *)   colour="${DIM}" ;;
+            esac
+        else
+            local grade_info
+            grade_info=$(get_grade "$row_catches" "$pb")
+            grade="${grade_info%%|*}"
+            colour="${grade_info##*|}"
+        fi
         printf "  ${BOLD}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s  %s${RESET}   ${colour}%-3s${RESET}\n" \
             "$i" "$row_catches" "$row_date" "$row_time" "$grade"
         (( i++ ))
