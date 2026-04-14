@@ -2701,6 +2701,26 @@ show_day() {
     echo -e "  ${BOLD}Trials        :${RESET}  ${day_count}"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${day_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${day_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}${day_sign}"
+    local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local -a _day_sv=()
+    local _day_smin=999999 _day_smax=0
+    while IFS=',' read -r _ _ _sc; do
+        _day_sv+=("$_sc")
+        (( _sc < _day_smin )) && _day_smin=$_sc
+        (( _sc > _day_smax )) && _day_smax=$_sc
+    done < <(awk -F',' -v d="$target_date" '$1==d' "$DATA_FILE")
+    if (( ${#_day_sv[@]} >= 2 )); then
+        local _day_srange=$(( _day_smax - _day_smin ))
+        local _day_sparkline=""
+        for _sc in "${_day_sv[@]}"; do
+            local _day_idx
+            if (( _day_srange == 0 )); then _day_idx=3
+            else _day_idx=$(( (_sc - _day_smin) * 7 / _day_srange ))
+            fi
+            _day_sparkline+="${_spark_chars[$_day_idx]}"
+        done
+        echo -e "  ${BOLD}Session       :${RESET}  ${_day_sparkline}  ${DIM}← first  latest →${RESET}"
+    fi
     if (( is_current )); then
         local _above_count _day_rank _day_total _gloss
         _above_count=$(awk -F',' -v d="$target_date" -v avg="$alltime_avg" '
@@ -2864,6 +2884,32 @@ show_week() {
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of 7"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${w_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${w_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${week_sign}"
+    local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local -a _wk_vals=()
+    local _wk_min=999999 _wk_max=0 _wk_d
+    for (( _wk_d=0; _wk_d<7; _wk_d++ )); do
+        local _wk_date
+        _wk_date=$(date -d "$week_start +${_wk_d} days" +%Y-%m-%d)
+        local _wk_v
+        _wk_v=$(awk -F',' -v dt="$_wk_date" '$1==dt{s+=$3;n++} END{printf "%d",int((n>0?s/n:0))}' "$DATA_FILE")
+        _wk_vals+=("$_wk_v")
+        (( _wk_v > 0 && _wk_v < _wk_min )) && _wk_min=$_wk_v
+        (( _wk_v > _wk_max )) && _wk_max=$_wk_v
+    done
+    local _wk_range=$(( _wk_max - _wk_min ))
+    local _wk_sparkline=""
+    for _wk_v in "${_wk_vals[@]}"; do
+        if (( _wk_v == 0 )); then
+            _wk_sparkline+="${DIM}·${RESET}"
+        else
+            local _wk_idx
+            if (( _wk_range == 0 )); then _wk_idx=3
+            else _wk_idx=$(( (_wk_v - _wk_min) * 7 / _wk_range ))
+            fi
+            _wk_sparkline+="${_spark_chars[$_wk_idx]}"
+        fi
+    done
+    echo -e "  ${BOLD}Days          :${RESET}  ${_wk_sparkline}  ${DIM}← Mon  Sun →${RESET}"
     if (( is_current )); then
         local _week_rank _week_total _gloss
         read -r _week_rank _week_total <<< "$(awk -F',' -v ws="$week_start" '
@@ -3016,6 +3062,34 @@ show_month() {
     echo -e "  ${BOLD}Active days   :${RESET}  ${active_days} of ${days_in_month}"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${m_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${m_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${month_sign}"
+    local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local -A _mo_map=()
+    local _mo_min=999999 _mo_max=0
+    while IFS=' ' read -r _mo_k _mo_v; do
+        _mo_map["$_mo_k"]=$_mo_v
+        (( _mo_v < _mo_min )) && _mo_min=$_mo_v
+        (( _mo_v > _mo_max )) && _mo_max=$_mo_v
+    done < <(awk -F',' -v m="$target_month" '
+        substr($1,1,7)==m {sum[$1]+=$3; cnt[$1]++}
+        END {for (d in sum) printf "%s %d\n", d, int(sum[d]/cnt[d])}
+    ' "$DATA_FILE")
+    local _mo_range=$(( _mo_max - _mo_min ))
+    local _mo_sparkline="" _mo_dd
+    for (( _mo_dd=1; _mo_dd<=days_in_month; _mo_dd++ )); do
+        local _mo_dk
+        printf -v _mo_dk "%s-%02d" "$target_month" "$_mo_dd"
+        local _mo_dv=${_mo_map["$_mo_dk"]:-0}
+        if (( _mo_dv == 0 )); then
+            _mo_sparkline+="${DIM}·${RESET}"
+        else
+            local _mo_idx
+            if (( _mo_range == 0 )); then _mo_idx=3
+            else _mo_idx=$(( (_mo_dv - _mo_min) * 7 / _mo_range ))
+            fi
+            _mo_sparkline+="${_spark_chars[$_mo_idx]}"
+        fi
+    done
+    echo -e "  ${BOLD}Daily avg     :${RESET}  ${_mo_sparkline}  ${DIM}← 1st  last →${RESET}"
     if (( is_current )); then
         local _month_rank _month_total _gloss
         read -r _month_rank _month_total <<< "$(awk -F',' -v m="$target_month" '
@@ -3186,6 +3260,32 @@ show_year() {
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${y_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
     echo -e "  ${BOLD}Avg           :${RESET}  ${y_avg}  ${DIM}(all-time: ${alltime_avg})${RESET}${year_sign}"
     echo -e "  ${BOLD}Best month    :${RESET}  ${best_month_label}  ${DIM}(avg ${best_month_avg})${RESET}"
+    local _spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local -a _yr_vals=()
+    local _yr_min=999999 _yr_max=0 _yr_m
+    for (( _yr_m=1; _yr_m<=12; _yr_m++ )); do
+        local _yr_mk
+        printf -v _yr_mk "%s-%02d" "$target_year" "$_yr_m"
+        local _yr_v
+        _yr_v=$(awk -F',' -v mk="$_yr_mk" 'substr($1,1,7)==mk{s+=$3;n++} END{printf "%d",int((n>0?s/n:0))}' "$DATA_FILE")
+        _yr_vals+=("$_yr_v")
+        (( _yr_v > 0 && _yr_v < _yr_min )) && _yr_min=$_yr_v
+        (( _yr_v > _yr_max )) && _yr_max=$_yr_v
+    done
+    local _yr_range=$(( _yr_max - _yr_min ))
+    local _yr_sparkline=""
+    for _yr_v in "${_yr_vals[@]}"; do
+        if (( _yr_v == 0 )); then
+            _yr_sparkline+="${DIM}·${RESET}"
+        else
+            local _yr_idx
+            if (( _yr_range == 0 )); then _yr_idx=3
+            else _yr_idx=$(( (_yr_v - _yr_min) * 7 / _yr_range ))
+            fi
+            _yr_sparkline+="${_spark_chars[$_yr_idx]}"
+        fi
+    done
+    echo -e "  ${BOLD}Monthly avg   :${RESET}  ${_yr_sparkline}  ${DIM}← Jan  Dec →${RESET}"
     if (( is_current )); then
         local _year_count _gloss
         _year_count=$(awk -F',' '{y[substr($1,1,4)]=1} END{print length(y)}' "$DATA_FILE")
