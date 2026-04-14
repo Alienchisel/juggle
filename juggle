@@ -734,6 +734,13 @@ log_score() {
         echo -e "  ${DIM}Session: ${_ses_count} trials  ·  avg ${_ses_avg}  ·  best ${_ses_best}${RESET}"
     fi
 
+    # Streak personal best callout
+    local _log_cur_streak _log_best_streak
+    read -r _log_cur_streak _log_best_streak <<< "$(calc_streaks)"
+    if (( _log_cur_streak >= 2 && _log_cur_streak == _log_best_streak )); then
+        echo -e "  ${CYAN}Chain at ${_log_cur_streak} — the longest it has run.${RESET}"
+    fi
+
     # Nemesis match — fire occasionally (1 in 3) when score equals current Nemesis
     local _nem_score=0
     IFS=',' read -r _nem_score _ < "$NEMESIS_FILE" 2>/dev/null
