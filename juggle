@@ -2784,7 +2784,7 @@ show_day() {
     done < <(awk -F',' -v d="$target_date" '$1==d' "$DATA_FILE")
     if (( ${#_day_sv[@]} >= 2 )); then
         # Downsample to at most 60 chars by bucketing into groups
-        local _day_spark_width=60
+        local _day_spark_width=38
         local _day_n=${#_day_sv[@]}
         local -a _day_buckets=()
         local _b
