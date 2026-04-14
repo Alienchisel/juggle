@@ -2471,6 +2471,17 @@ show_stats() {
         fi
     done
 
+    # PB cadence
+    local pb_cadence="" pb_hist_count
+    pb_hist_count=$(wc -l < "$PB_FILE" | tr -d ' ')
+    if (( pb_hist_count >= 2 )); then
+        local first_pb_date last_pb_date pb_span_days
+        first_pb_date=$(head -n1 "$PB_FILE" | cut -d',' -f1)
+        last_pb_date=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
+        pb_span_days=$(( ( $(date -d "$last_pb_date" +%s) - $(date -d "$first_pb_date" +%s) ) / 86400 ))
+        pb_cadence=$(awk "BEGIN {printf \"%.1f\", $pb_span_days / ($pb_hist_count - 1)}")
+    fi
+
     # Recent trend
     local trend_line=""
     if (( total >= 10 )); then
@@ -2500,6 +2511,9 @@ show_stats() {
         echo -e "  ${BOLD}Apex age      :${RESET}  ${DIM}set today${RESET}"
     else
         echo -e "  ${BOLD}Apex age      :${RESET}  ${days_since_pb} day(s)  ${DIM}(set ${pb_date})${RESET}"
+    fi
+    if [[ -n "$pb_cadence" ]]; then
+        echo -e "  ${BOLD}Apex cadence  :${RESET}  ${pb_cadence} days per PB  ${DIM}(${pb_hist_count} records)${RESET}"
     fi
     local stats_rank
     stats_rank=$(get_rank "$pb")
