@@ -2562,8 +2562,30 @@ show_stats() {
     fi
 
     # ── Apex Record ────────────────────────────────────────────────────────────
+    # PB progression sparkline
+    local _pb_spark_chars=("▁" "▂" "▃" "▄" "▅" "▆" "▇" "█")
+    local -a _pb_vals=()
+    local _pb_min=999999 _pb_max=0
+    while IFS=',' read -r _ _ _pv; do
+        _pb_vals+=("$_pv")
+        (( _pv < _pb_min )) && _pb_min=$_pv
+        (( _pv > _pb_max )) && _pb_max=$_pv
+    done < "$PB_FILE"
+    local _pb_sparkline=""
+    if (( ${#_pb_vals[@]} >= 2 )); then
+        local _pb_range=$(( _pb_max - _pb_min ))
+        for _pv in "${_pb_vals[@]}"; do
+            local _pb_idx
+            if (( _pb_range == 0 )); then _pb_idx=7
+            else _pb_idx=$(( (_pv - _pb_min) * 7 / _pb_range ))
+            fi
+            _pb_sparkline+="${_pb_spark_chars[$_pb_idx]}"
+        done
+    fi
     echo -e "\n  ${BOLD}Apex Record${RESET}  ${DIM}(last 10)${RESET}"
     echo -e "  ${DIM}$(printf '─%.0s' {1..38})${RESET}"
+    [[ -n "$_pb_sparkline" ]] && \
+        echo -e "  ${YELLOW}${_pb_sparkline}${RESET}  ${DIM}← first pb  current →${RESET}"
     show_apex "$pb" no_header 10
 
     # ── Grade Distribution ────────────────────────────────────────────────────────
