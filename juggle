@@ -2846,25 +2846,33 @@ show_day() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     local i=1
     while IFS=',' read -r row_date row_time row_catches row_stored_grade; do
-        local grade grade_colour
+        local cur_grade_info cur_grade cur_colour
+        cur_grade_info=$(get_grade "$row_catches" "$pb")
+        cur_grade="${cur_grade_info%%|*}"
+        cur_colour="${cur_grade_info##*|}"
+        local hist_grade hist_colour
         if [[ -n "$row_stored_grade" ]]; then
-            grade="$row_stored_grade"
-            case "$grade" in
-                SSS) grade_colour="${YELLOW}${BOLD}" ;;
-                SS)  grade_colour="${YELLOW}" ;;
-                S)   grade_colour="${GREEN}" ;;
-                A|B) grade_colour="${CYAN}" ;;
-                C|D) grade_colour="${RED}" ;;
-                *)   grade_colour="${DIM}" ;;
+            hist_grade="$row_stored_grade"
+            case "$hist_grade" in
+                SSS) hist_colour="${YELLOW}${BOLD}" ;;
+                SS)  hist_colour="${YELLOW}" ;;
+                S)   hist_colour="${GREEN}" ;;
+                A|B) hist_colour="${CYAN}" ;;
+                C|D) hist_colour="${RED}" ;;
+                *)   hist_colour="${DIM}" ;;
             esac
         else
-            local grade_info
-            grade_info=$(get_grade "$row_catches" "$pb")
-            grade="${grade_info%%|*}"
-            grade_colour="${grade_info##*|}"
+            hist_grade="$cur_grade"
+            hist_colour="$cur_colour"
         fi
-        printf "  ${DIM}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   ${grade_colour}%-3s${RESET}\n" \
-            "$i" "$row_catches" "$row_time" "$grade"
+        local grade_display
+        if [[ "$hist_grade" != "$cur_grade" ]]; then
+            grade_display="${hist_colour}${hist_grade}${RESET}${DIM}→${RESET}${cur_colour}${cur_grade}${RESET}"
+        else
+            grade_display="${cur_colour}${cur_grade}${RESET}"
+        fi
+        printf "  ${DIM}%3d.${RESET}  ${BOLD}%3d catches${RESET}   ${DIM}%s${RESET}   %b\n" \
+            "$i" "$row_catches" "$row_time" "$grade_display"
         (( i++ ))
     done < <(awk -F',' -v d="$target_date" '$1 == d' "$DATA_FILE")
     echo ""
