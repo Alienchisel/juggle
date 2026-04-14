@@ -2344,6 +2344,62 @@ show_stats() {
     best_this_week=$(awk -F',' -v ws="$week_start" '$1 >= ws {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
     best_this_month=$(awk -F',' -v m="$this_month" '$1 ~ m {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
 
+    # This week avg
+    local this_week_avg
+    this_week_avg=$(awk -F',' -v ws="$week_start" \
+        '$1>=ws {s+=$3; n++} END {printf "%.1f", (n>0?s/n:0)}' "$DATA_FILE")
+    local week_label
+    week_label="$(date -d "$week_start" '+%b %-d') – $(date -d "$today" '+%b %-d')"
+
+    # This year
+    local this_year
+    this_year=$(date +%Y)
+    local year_count year_avg
+    read -r year_count year_avg <<< "$(awk -F',' -v y="$this_year" '
+        substr($1,1,4)==y {n++; s+=$3}
+        END {printf "%d %.1f", n+0, (n>0?s/n:0)}
+    ' "$DATA_FILE")"
+
+    # Today
+    local today_count today_avg
+    read -r today_count today_avg <<< "$(awk -F',' -v d="$today" '
+        $1==d {n++; s+=$3}
+        END {printf "%d %.1f", n+0, (n>0?s/n:0)}
+    ' "$DATA_FILE")"
+
+    # Best week by avg — aggregate per unique day, group by Mon week start
+    local best_week_key="" best_week_avg=0
+    local -A _ws_sum _ws_cnt
+    while IFS=' ' read -r _d _ds _dc; do
+        local _dow _ws
+        _dow=$(date -d "$_d" +%u)
+        _ws=$(date -d "$_d -$(( _dow - 1 )) days" +%Y-%m-%d)
+        _ws_sum["$_ws"]=$(( ${_ws_sum["$_ws"]:-0} + _ds ))
+        _ws_cnt["$_ws"]=$(( ${_ws_cnt["$_ws"]:-0} + _dc ))
+    done < <(awk -F',' '{sum[$1]+=$3; cnt[$1]++} END {for (d in sum) printf "%s %d %d\n", d, sum[d], cnt[d]}' "$DATA_FILE")
+    for _ws in "${!_ws_sum[@]}"; do
+        local _wavg
+        _wavg=$(awk "BEGIN {printf \"%.1f\", ${_ws_sum[$_ws]} / ${_ws_cnt[$_ws]}}")
+        if awk "BEGIN {exit !($_wavg > $best_week_avg)}"; then
+            best_week_avg=$_wavg
+            best_week_key=$_ws
+        fi
+    done
+    local best_week_label=""
+    [[ -n "$best_week_key" ]] && \
+        best_week_label="$(date -d "$best_week_key" '+%b %-d') – $(date -d "$best_week_key +6 days" '+%b %-d')"
+
+    # Best year by avg
+    local best_year best_year_avg
+    read -r best_year best_year_avg <<< "$(awk -F',' '
+        { y=substr($1,1,4); sum[y]+=$3; cnt[y]++ }
+        END {
+            best_avg=0; by=""
+            for (y in sum) { a=sum[y]/cnt[y]; if (a>best_avg) { best_avg=a; by=y } }
+            printf "%s %.1f", by, best_avg
+        }
+    ' "$DATA_FILE")"
+
     # Streaks
     local cur_streak best_streak
     read -r cur_streak best_streak <<< "$(calc_streaks)"
@@ -2485,10 +2541,20 @@ show_stats() {
     echo -e "  ${BOLD}Total catches :${RESET}  ${sum}"
     echo ""
     echo -e "  ${BOLD}Juggling since:${RESET}  ${first_date}  ${DIM}(${since_days} days)${RESET}"
-    echo -e "  ${BOLD}This month    :${RESET}  ${month_sessions} trial(s), avg ${month_avg}  ${DIM}(best: ${best_this_month})  (all-time avg: ${avg})${RESET}"
-    echo -e "  ${BOLD}Best month    :${RESET}  ${best_month}  ${DIM}(avg ${best_month_avg})${RESET}"
-    echo -e "  ${BOLD}Best day      :${RESET}  ${best_day_date}  ${DIM}(${best_day_count} trials, avg ${best_day_avg})${RESET}"
-    echo -e "  ${BOLD}Trials/week   :${RESET}  ${sessions_per_week} avg  ${DIM}(this week: ${this_week_sessions}, best: ${best_this_week})${RESET}"
+    echo -e "  ${BOLD}Trials/week   :${RESET}  ${sessions_per_week} avg  ${DIM}(this week: ${this_week_sessions})${RESET}"
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}PERIOD RECAP${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    # Helper: "best: same" or "best: KEY  avg X"
+    _pbest() {
+        if [[ "$1" == "$2" ]]; then echo "${DIM}best: same${RESET}"
+        else echo "${DIM}best: $3  avg $4${RESET}"; fi
+    }
+    echo -e "  ${BOLD}Day  ${RESET}  ${today}        ${today_count} trials   avg ${today_avg}   $(_pbest "$today" "$best_day_date" "$best_day_date" "$best_day_avg")"
+    echo -e "  ${BOLD}Week ${RESET}  ${week_label}   ${this_week_sessions} trials   avg ${this_week_avg}   $(_pbest "$week_start" "$best_week_key" "$best_week_label" "$best_week_avg")"
+    echo -e "  ${BOLD}Month${RESET}  ${this_month}          ${month_sessions} trials   avg ${month_avg}   $(_pbest "$this_month" "$best_month" "$best_month" "$best_month_avg")"
+    echo -e "  ${BOLD}Year ${RESET}  ${this_year}              ${year_count} trials   avg ${year_avg}   $(_pbest "$this_year" "$best_year" "$best_year" "$best_year_avg")"
     echo ""
     echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(10th percentile, last 20 trials)${RESET}"
     echo -e "  ${BOLD}Ceiling       :${RESET}  ${ceiling_val} catches  ${DIM}(90th percentile, last 20 trials)${RESET}"
