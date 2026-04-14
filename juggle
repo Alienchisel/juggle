@@ -704,6 +704,10 @@ log_score() {
     (( top_pct < 1 )) && top_pct=1
     if (( rank == 1 )); then
         echo -e "  ${YELLOW}#1 in the Annals.${RESET}"
+    elif (( rank <= 3 )); then
+        echo -e "  ${CYAN}${BOLD}#${rank}${RESET} of ${total} — top ${top_pct}%.  ${DIM}Among the highest.${RESET}"
+    elif (( rank <= 10 )); then
+        echo -e "  ${CYAN}#${rank}${RESET} of ${total} — top ${top_pct}%.  ${DIM}Among the ten.${RESET}"
     else
         echo -e "  #${BOLD}${rank}${RESET} of ${total} — top ${top_pct}%."
     fi
