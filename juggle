@@ -2627,12 +2627,17 @@ show_stats() {
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}FORM${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
-    echo -e "  ${BOLD}Floor         :${RESET}  ${floor_val} catches  ${DIM}(10th percentile, last 20 trials)${RESET}"
-    echo -e "  ${BOLD}Ceiling       :${RESET}  ${ceiling_val} catches  ${DIM}(90th percentile, last 20 trials)${RESET}"
-    echo -e "  ${BOLD}Steadfastness :${RESET}  ${consist_recent}%  ${DIM}(last 20)  ≥ ${steadfast_threshold} catches${RESET}"
-    echo -e "  ${BOLD}Zone          :${RESET}  ${zone_pct}%  ${DIM}(last 20)  ≥ ${zone_threshold} catches${RESET}"
+    printf "  ${BOLD}%-15s${RESET}  %-14s  ${DIM}%s${RESET}\n" \
+        "Floor         :" "${floor_val} catches" "(10th percentile, last 20 trials)"
+    printf "  ${BOLD}%-15s${RESET}  %-14s  ${DIM}%s${RESET}\n" \
+        "Ceiling       :" "${ceiling_val} catches" "(90th percentile, last 20 trials)"
+    printf "  ${BOLD}%-15s${RESET}  %-4s  ${DIM}%s${RESET}\n" \
+        "Steadfastness :" "${consist_recent}%" "(last 20)  ≥ ${steadfast_threshold} catches"
+    printf "  ${BOLD}%-15s${RESET}  %-4s  ${DIM}%s${RESET}\n" \
+        "Zone          :" "${zone_pct}%" "(last 20)  ≥ ${zone_threshold} catches"
     if (( nemesis_count >= 2 )); then
-        echo -e "  ${BOLD}Nemesis       :${RESET}  ${RED}${nemesis_score} catches${RESET}  ${DIM}(${nemesis_count} times)${RESET}"
+        printf "  ${BOLD}%-15s${RESET}  ${RED}%-14s${RESET}  ${DIM}%s${RESET}\n" \
+            "Nemesis       :" "${nemesis_score} catches" "(${nemesis_count} times)"
     fi
     [[ -n "$trend_line" ]] && echo -e "$trend_line"
 
