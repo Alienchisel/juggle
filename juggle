@@ -724,6 +724,16 @@ log_score() {
         fi
     fi
 
+    # Session summary — today's running totals
+    local _ses_count _ses_best _ses_avg
+    read -r _ses_count _ses_best _ses_avg <<< "$(awk -F',' -v d="$today" '
+        $1==d {n++; s+=$3; if ($3>best) best=$3}
+        END {printf "%d %d %.1f", n+0, best+0, (n>0?s/n:0)}
+    ' "$DATA_FILE")"
+    if (( _ses_count > 1 )); then
+        echo -e "  ${DIM}Session: ${_ses_count} trials  ·  avg ${_ses_avg}  ·  best ${_ses_best}${RESET}"
+    fi
+
     # Nemesis match — fire occasionally (1 in 3) when score equals current Nemesis
     local _nem_score=0
     IFS=',' read -r _nem_score _ < "$NEMESIS_FILE" 2>/dev/null
