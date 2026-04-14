@@ -2675,19 +2675,50 @@ show_day() {
     grade="${grade_info%%|*}"
     grade_colour="${grade_info##*|}"
 
+    # vs yesterday
+    local prev_date prev_count prev_avg day_sign=""
+    prev_date=$(date -d "$target_date -1 day" +%Y-%m-%d)
+    read -r prev_count prev_avg <<< "$(awk -F',' -v d="$prev_date" '
+        $1 == d { s+=$3; n++ }
+        END { printf "%d %.1f", n+0, (n>0?s/n:0) }
+    ' "$DATA_FILE")"
+    if (( prev_count > 0 )); then
+        local day_diff
+        day_diff=$(awk "BEGIN {printf \"%.1f\", $day_avg - $prev_avg}")
+        if awk "BEGIN {exit !($day_diff > 0)}"; then
+            day_sign="  ${GREEN}▲ +${day_diff} vs yesterday${RESET}"
+        elif awk "BEGIN {exit !($day_diff < 0)}"; then
+            day_sign="  ${RED}▼ ${day_diff} vs yesterday${RESET}"
+        else
+            day_sign="  ${DIM}= no change vs yesterday${RESET}"
+        fi
+    fi
+
     gum_header "IVGVLATOR"$'\n'"· DAY RECAP ·"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}DAY${RESET}  ${DIM}${target_date}${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
     echo -e "  ${BOLD}Trials        :${RESET}  ${day_count}"
     echo -e "  ${BOLD}Best          :${RESET}  ${BOLD}${day_best} catches${RESET}  ${grade_colour}${grade}${RESET}"
-    echo -e "  ${BOLD}Avg           :${RESET}  ${day_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}"
+    echo -e "  ${BOLD}Avg           :${RESET}  ${day_avg}  ${DIM}(all-time avg: ${alltime_avg})${RESET}${day_sign}"
     if (( is_current )); then
-        local _above_count _gloss
+        local _above_count _day_rank _day_total _gloss
         _above_count=$(awk -F',' -v d="$target_date" -v avg="$alltime_avg" '
             $1 == d && $3+0 > avg+0 { n++ }
             END { print n+0 }
         ' "$DATA_FILE")
+        read -r _day_rank _day_total <<< "$(awk -F',' -v td="$target_date" '
+            { key=$1; sum[key]+=$3; cnt[key]++ }
+            END {
+                cur = (cnt[td]>0 ? sum[td]/cnt[td] : 0)
+                n=0; rank=1
+                for (k in sum) {
+                    n++
+                    if (k != td && sum[k]/cnt[k] > cur) rank++
+                }
+                print rank, n
+            }
+        ' "$DATA_FILE")"
         if (( day_count == 1 )); then
             if (( _above_count == 1 )); then
                 _gloss="A trial above the long line."
@@ -2707,8 +2738,22 @@ show_day() {
         else
             _gloss="The trials were divided."
         fi
+        local _rank_gloss=""
+        if (( _day_total == 1 )); then
+            _rank_gloss="The first day on record."
+        elif (( _day_rank == 1 )); then
+            _rank_gloss="The strongest day on record."
+        elif (( _day_rank == _day_total )); then
+            _rank_gloss="The weakest day on record."
+        elif (( _day_rank * 4 <= _day_total )); then
+            _rank_gloss="Among the stronger days on record."
+        elif (( _day_rank * 4 >= _day_total * 3 )); then
+            _rank_gloss="Among the weaker days on record."
+        else
+            _rank_gloss="A middle-of-the-record day."
+        fi
         echo ""
-        echo -e "  ${DIM}${_gloss}${RESET}"
+        echo -e "  ${DIM}${_gloss} ${_rank_gloss}${RESET}"
     fi
 
     # Trial list
