@@ -774,9 +774,21 @@ log_score() {
             _aug_parts+=("Chain at ${_cur_streak}.")
         fi
     fi
-    (( ${_sc:-0} >= 3        )) && _aug_parts+=("Spree at ${_sc}.")
+    if (( ${_sc:-0} >= 3 )); then
+        if (( _sc == ${_spk:-0} )); then
+            _aug_parts+=("Spree at ${_sc} — Spree PB.")
+        else
+            _aug_parts+=("Spree at ${_sc}.")
+        fi
+    fi
     (( ${_da:-0}             )) && _aug_parts+=("Dominance.")
-    (( _echo_count >= 3      )) && _aug_parts+=("Echo.")
+    if (( _echo_count >= 3 )); then
+        if (( _echo_count == ${_epk:-0} )); then
+            _aug_parts+=("Echo — ${_echo_count}, PB.")
+        else
+            _aug_parts+=("Echo — ${_echo_count}.")
+        fi
+    fi
     if (( ${#_aug_parts[@]} > 0 )); then
         local _aug_line
         _aug_line=$(printf '%s  ' "${_aug_parts[@]}")
