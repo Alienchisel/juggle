@@ -4189,7 +4189,7 @@ usage() {
     echo ""
     echo -e "  ${DIM}Data stored in: ${DATA_DIR}/${RESET}"
     echo -e "  ${DIM}  (override with: JUGGLE_DATA_DIR=/path/to/dir)${RESET}"
-    echo -e "  ${DIM}  scores.csv       — all trials (date,time,catches)${RESET}"
+    echo -e "  ${DIM}  scores.csv       — all trials (date,time,catches,grade)${RESET}"
     echo -e "  ${DIM}  milestones.csv   — omen log (type,key,date)${RESET}"
     echo -e "  ${DIM}  pb_history.csv   — Apex record (date,time,catches)${RESET}"
     echo -e "  ${DIM}  streak_state.csv — chain / omen state${RESET}"
