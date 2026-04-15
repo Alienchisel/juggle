@@ -112,6 +112,26 @@ gum_header() {
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+check_dependencies() {
+    local missing=0
+
+    # Hard dependencies — script cannot function without these
+    if ! command -v gum &>/dev/null; then
+        echo "juggle: 'gum' not found. Install from https://github.com/charmbracelet/gum" >&2
+        missing=1
+    fi
+    if ! date -d "today" &>/dev/null; then
+        echo "juggle: GNU date required (date -d not supported on this system)." >&2
+        missing=1
+    fi
+    (( missing )) && exit 1
+
+    # Soft dependency — protective but not critical
+    if ! command -v flock &>/dev/null; then
+        echo "juggle: 'flock' not found — atomic write protection disabled." >&2
+    fi
+}
+
 init_data() {
     mkdir -p "$DATA_DIR"
     touch "$DATA_FILE"
@@ -669,15 +689,19 @@ log_score() {
         _sg_info=$(get_grade "$catches" "$pb")
         _store_grade="${_sg_info%%|*}"
     fi
-    local _lock_file="$DATA_DIR/.juggle.lock"
-    local _tmp_file
-    _tmp_file=$(mktemp "$DATA_DIR/.scores.tmp.XXXXXX")
-    (
-        flock -x 9
-        cp "$DATA_FILE" "$_tmp_file"
-        echo "$today,$now,$catches,$_store_grade" >> "$_tmp_file"
-        mv "$_tmp_file" "$DATA_FILE"
-    ) 9>"$_lock_file"
+    if command -v flock &>/dev/null; then
+        local _lock_file="$DATA_DIR/.juggle.lock"
+        local _tmp_file
+        _tmp_file=$(mktemp "$DATA_DIR/.scores.tmp.XXXXXX")
+        (
+            flock -x 9
+            cp "$DATA_FILE" "$_tmp_file"
+            echo "$today,$now,$catches,$_store_grade" >> "$_tmp_file"
+            mv "$_tmp_file" "$DATA_FILE"
+        ) 9>"$_lock_file"
+    else
+        echo "$today,$now,$catches,$_store_grade" >> "$DATA_FILE"
+    fi
 
     if (( catches > pb )); then
         update_pb_history "$catches" "$today" "$now"
@@ -4214,6 +4238,7 @@ usage() {
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 init_data
+check_dependencies
 
 case "$1" in
     ''|--help|-h)
