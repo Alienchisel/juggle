@@ -139,6 +139,13 @@ init_data() {
             score_fields=3
         fi
         if (( score_fields == 3 )); then
+            # Backfill grade field for pre-4.0 data.
+            # Grades are reconstructed as "grade against the running PB at time of
+            # entry": each row is graded against the highest catch seen so far in
+            # file order. This matches the intent of log_score() — stored grade
+            # reflects how the trial ranked against the Apex that existed when it
+            # was logged, not today's Apex. For entries with 00:00:00 timestamps
+            # (bulk-imported or early data) file order is used as a best approximation.
             local tmp
             tmp=$(mktemp)
             awk -F',' 'BEGIN{OFS=","; max=0} {
@@ -651,6 +658,9 @@ log_score() {
     local _wc=0; [[ -f "$WITNESS_FILE" ]] && _wc=$(< "$WITNESS_FILE")
     echo "$_wc" > "$WITNESS_UNDO_MARK"
 
+    # Stored grade: reflects how this trial ranked against the Apex at the moment
+    # of logging — not today's Apex. Used by grade_pair_display() as the
+    # "historical" side of the hist→curr comparison shown in jug last, top, etc.
     local _store_grade
     if (( catches > pb )); then
         _store_grade="SSS"
