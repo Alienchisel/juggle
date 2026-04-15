@@ -2538,12 +2538,26 @@ show_stats() {
     # PB cadence
     local pb_cadence="" pb_hist_count
     pb_hist_count=$(wc -l < "$PB_FILE" | tr -d ' ')
+    local pb_drought_days="" pb_drought_start="" pb_drought_end=""
     if (( pb_hist_count >= 2 )); then
         local first_pb_date last_pb_date pb_span_days
         first_pb_date=$(head -n1 "$PB_FILE" | cut -d',' -f1)
         last_pb_date=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
         pb_span_days=$(( ( $(date -d "$last_pb_date" +%s) - $(date -d "$first_pb_date" +%s) ) / 86400 ))
         pb_cadence=$(awk "BEGIN {printf \"%.1f\", $pb_span_days / ($pb_hist_count - 1)}")
+        read -r pb_drought_days pb_drought_start pb_drought_end <<< "$(awk -F',' '
+            function date_to_days(d,    y,m,dy) {
+                y  = substr(d,1,4)+0; m = substr(d,6,2)+0; dy = substr(d,9,2)+0
+                if (m <= 2) { m += 12; y-- }
+                return int(365.25*(y+4716)) + int(30.6001*(m+1)) + dy - 1524
+            }
+            NR > 1 {
+                gap = date_to_days($1) - date_to_days(prev_date)
+                if (gap > max_gap) { max_gap = gap; ds = prev_date; de = $1 }
+            }
+            { prev_date = $1 }
+            END { printf "%d %s %s", max_gap+0, ds, de }
+        ' "$PB_FILE")"
     fi
 
     # Recent trend
@@ -2578,6 +2592,9 @@ show_stats() {
     fi
     if [[ -n "$pb_cadence" ]]; then
         echo -e "  ${BOLD}Apex cadence  :${RESET}  ${pb_cadence} days per PB  ${DIM}(${pb_hist_count} records)${RESET}"
+    fi
+    if [[ -n "$pb_drought_days" && "$pb_drought_days" -gt 0 ]]; then
+        echo -e "  ${BOLD}Apex drought  :${RESET}  ${pb_drought_days} day(s)  ${DIM}(${pb_drought_start} → ${pb_drought_end})${RESET}"
     fi
     local stats_rank
     stats_rank=$(get_rank "$pb")
