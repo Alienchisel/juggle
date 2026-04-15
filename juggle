@@ -736,7 +736,11 @@ log_score() {
         END {printf "%d %d %.1f", n+0, best+0, (n>0?s/n:0)}
     ' "$DATA_FILE")"
     if (( _ses_count > 1 )); then
-        echo -e "  ${DIM}Session: ${_ses_count} trials  ·  avg ${_ses_avg}  ·  best ${_ses_best}${RESET}"
+        local _ses_grade_info _ses_grade _ses_grade_col
+        _ses_grade_info=$(get_grade "$_ses_best" "$display_pb")
+        _ses_grade="${_ses_grade_info%%|*}"
+        _ses_grade_col=$(grade_colour_for "$_ses_grade")
+        echo -e "  ${DIM}Session: ${_ses_count} trials  ·  avg ${_ses_avg}  ·  best ${_ses_best}${RESET}  ${_ses_grade_col}${_ses_grade}${RESET}"
     fi
 
     # Streak personal best callout — day 2 only (day 3+ is covered by the Augury line)
