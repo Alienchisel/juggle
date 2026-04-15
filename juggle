@@ -22,7 +22,7 @@
 #   juggle --help         Show usage help
 #
 # Data files (default: alongside this script in ./juggle-data/; override with $JUGGLE_DATA_DIR):
-#   scores.csv            Every trial: date,time,catches
+#   scores.csv            Every trial: date,time,catches,grade
 #   milestones.csv        Omen log (fired omens): type,key,date
 #   pb_history.csv        Apex record: date,time,catches
 #   streak_state.csv      Chain peak, spree count, dominance state
@@ -112,14 +112,32 @@ init_data() {
     fi
     [[ ! -f "$AVG_TREND_FILE" ]] && echo "0,0" > "$AVG_TREND_FILE"
 
-    # Migrate scores.csv from date,catches → date,time,catches
+    # Migrate scores.csv to current format (date,time,catches,grade)
     local score_fields
     score_fields=$(awk -F',' 'NF{print NF; exit}' "$DATA_FILE")
-    if [[ -n "$score_fields" && "$score_fields" != "3" ]]; then
+    if [[ -n "$score_fields" && "$score_fields" != "4" ]]; then
         if (( score_fields == 2 )); then
             local tmp
             tmp=$(mktemp)
             awk -F',' 'BEGIN{OFS=","} NF==2{print $1,"00:00:00",$2; next} {print}' "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
+            score_fields=3
+        fi
+        if (( score_fields == 3 )); then
+            local tmp
+            tmp=$(mktemp)
+            awk -F',' 'BEGIN{OFS=","; max=0} {
+                if ($3+0 > max) max=$3+0
+                pct = (max > 0) ? int($3*100/max) : 0
+                if      (pct >= 100) g="SSS"
+                else if (pct >= 90)  g="SS"
+                else if (pct >= 80)  g="S"
+                else if (pct >= 65)  g="A"
+                else if (pct >= 50)  g="B"
+                else if (pct >= 35)  g="C"
+                else if (pct >= 20)  g="D"
+                else                 g="F"
+                print $1,$2,$3,g
+            }' "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
         fi
     fi
 
