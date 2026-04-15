@@ -62,6 +62,22 @@ DIM='\033[2m'
 ITALIC='\033[3m'
 RESET='\033[0m'
 
+# ── Codex key registry (single source of truth for all discovery keys) ────────
+_CODEX_ALL_KEYS=(
+    FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
+    WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
+    FIRST_TALLY MYRIAD LEGION
+    ESTABLISHED_FORM HIGH_STANDARD IMMACULATE
+    STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED QUIET_INTERVAL FIRST_NAME ASSUMPTION NOTED SUSTAINED INEXORABLE UNRELENTING ONSLAUGHT FULL_AUGURY
+    CONGREGATION WITNESSED_ASCENT USURPER
+    CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
+    GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
+    GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
+    BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD
+    ARCHIVIST OMNIA
+    ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5
+)
+
 # ── Gum wrappers (Gruvbox Light theme) ────────────────────────────────────────
 
 gum_confirm() {
@@ -1128,8 +1144,8 @@ check_milestones() {
         fi
     fi
 
-    # The Full Augury — all auguries active simultaneously
-    # NOTE: if new auguries are added, update the condition below to include them
+    # The Full Augury — all four auguries active simultaneously
+    # (Chain ≥2, Spree ≥3, Dominance active, Echo ≥3)
     if ! codex_discovered "FULL_AUGURY"; then
         if (( cur_streak >= 2 && spree_count >= 3 && dominance_active && cur_echo_count >= 3 )); then
             record_codex "FULL_AUGURY" "$today"
@@ -1721,12 +1737,10 @@ check_codex() {
     fi
 
     # Omnia — all other entries discovered
-    # NOTE: update _omnia_total when new entries are added to show_codex
     if ! codex_discovered "OMNIA"; then
         local _disc_omnia
         _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        local _omnia_total=63
-        if (( _disc_omnia >= _omnia_total - 1 )); then
+        if (( _disc_omnia >= ${#_CODEX_ALL_KEYS[@]} - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
             any=1
@@ -1737,18 +1751,7 @@ check_codex() {
 }
 
 show_codex() {
-    local keys=( FIFTH_ENTRY TENTH_INSCRIPTION PATH_BEGINS HABIT_FORMS
-                 WEIGHT_OF_REPETITION DEEPENING THOUSAND_INSCRIBED UNCOUNTED_HOURS ENDLESS_LEDGER
-                 FIRST_TALLY MYRIAD LEGION
-                 ESTABLISHED_FORM HIGH_STANDARD IMMACULATE
-                 STILL_HAND SEPTEM NARROW_PATH CLIMB_WITHOUT_FALL THIRTY ANNUM FOUR_WATCHES ASCENT ECHO_CHAMBER RESONANCE UNBROKEN_REFLECTION UNBLEMISHED QUIET_INTERVAL FIRST_NAME ASSUMPTION NOTED SUSTAINED INEXORABLE UNRELENTING ONSLAUGHT FULL_AUGURY
-                 CONGREGATION WITNESSED_ASCENT USURPER
-                 CORRESPONDENCE SEQUENCE MIRROR DEEP_MIRROR SIEVE RATIO
-                 GATHERING_FORM STEADY_HAND TURNING_POINT TRIPLE_CROWN
-                 GOLDEN_SPAN SECOND_BREATH RELENTLESS_ARC COLOSSUS_RISES
-                 BREAKING_LIMITS HIGH_CURRENT THOUSANDFOLD
-                 ARCHIVIST OMNIA
-                ATTENDANT_1 ATTENDANT_2 ATTENDANT_3 ATTENDANT_4 ATTENDANT_5 )
+    local keys=( "${_CODEX_ALL_KEYS[@]}" )
     local names=( "The Fifth Entry" "The Tenth Inscription" "The Path Begins" "The Habit Forms"
                   "The Weight of Repetition" "The Deepening" "The Thousand Inscribed" "The Uncounted Hours" "The Endless Ledger"
                   "The First Tally" "The Myriad" "The Legion"
