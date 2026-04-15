@@ -643,7 +643,15 @@ log_score() {
         _sg_info=$(get_grade "$catches" "$pb")
         _store_grade="${_sg_info%%|*}"
     fi
-    echo "$today,$now,$catches,$_store_grade" >> "$DATA_FILE"
+    local _lock_file="$DATA_DIR/.juggle.lock"
+    local _tmp_file
+    _tmp_file=$(mktemp "$DATA_DIR/.scores.tmp.XXXXXX")
+    (
+        flock -x 9
+        cp "$DATA_FILE" "$_tmp_file"
+        echo "$today,$now,$catches,$_store_grade" >> "$_tmp_file"
+        mv "$_tmp_file" "$DATA_FILE"
+    ) 9>"$_lock_file"
 
     if (( catches > pb )); then
         update_pb_history "$catches" "$today" "$now"
