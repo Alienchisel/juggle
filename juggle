@@ -2677,7 +2677,7 @@ show_stats() {
             local _col; _col=$(grade_colour_for "$_g")
             local _gpad; printf -v _gpad "%-3s" "$_g"
             _gr_line+="${_col}${_gpad}${RESET} "
-        done < <(tail -n15 "$DATA_FILE")
+        done < <(tail -n10 "$DATA_FILE")
         [[ -n "$_gr_line" ]] && \
             echo -e "  ${BOLD}Recent grades :${RESET}  ${_gr_line% }  ${DIM}← oldest to newest${RESET}"
     fi
