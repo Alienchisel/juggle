@@ -2317,7 +2317,7 @@ show_apex() {
             fi
         fi
         if (( ph_val == pb )); then
-            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  ${DIM}← current${RESET}  %b  ${BLOOD}${BOLD}Sine pari.${RESET}\n" \
+            printf "  ${YELLOW}${BOLD}%-12s %8s  %3d catches${RESET}  %b  ${grade_colour}${BOLD}%-3s${RESET}  %b  ${BLOOD}${BOLD}Sine pari.${RESET}\n" \
                 "$ph_date" "$ph_time" "$ph_val" "$diff_str" "$grade" "$_stood_str"
         else
             printf "  ${DIM}%-12s %8s${RESET}  ${BOLD}%3d catches${RESET}  %b  ${grade_colour}%-3s${RESET}  %b\n" \
