@@ -2665,6 +2665,23 @@ show_stats() {
     fi
     [[ -n "$trend_line" ]] && echo -e "$trend_line"
 
+    # Grade run — last 15 trials, oldest to newest
+    if (( total >= 2 )); then
+        local _gr_line=""
+        while IFS=',' read -r _ _ _gc _gg; do
+            local _g="${_gg:-}"
+            if [[ -z "$_g" ]]; then
+                local _gi; _gi=$(get_grade "$_gc" "$pb")
+                _g="${_gi%%|*}"
+            fi
+            local _col; _col=$(grade_colour_for "$_g")
+            local _gpad; printf -v _gpad "%-3s" "$_g"
+            _gr_line+="${_col}${_gpad}${RESET} "
+        done < <(tail -n15 "$DATA_FILE")
+        [[ -n "$_gr_line" ]] && \
+            echo -e "  ${BOLD}Recent grades :${RESET}  ${_gr_line% }  ${DIM}← oldest to newest${RESET}"
+    fi
+
     # ── Auguries ───────────────────────────────────────────────────────────────
     local aug_spree_count aug_dom_active aug_spree_peak aug_echo_peak
     if [[ -s "$STREAK_FILE" ]]; then
