@@ -2405,8 +2405,8 @@ show_stats() {
     read -r sum avg <<< "$(awk -F',' '{s+=$3} END {printf "%d %.1f", s, s/NR}' "$DATA_FILE")"
 
     local median
-    median=$(awk -F',' '{print $3+0}' "$DATA_FILE" | sort -n | awk '
-        { vals[NR] = $1 }
+    median=$(sort -t',' -k3,3n "$DATA_FILE" | awk -F',' '
+        { vals[NR] = $3+0 }
         END {
             n = NR
             if (n % 2 == 1) printf "%.1f", vals[(n+1)/2]
