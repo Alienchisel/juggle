@@ -2483,17 +2483,11 @@ show_stats() {
     # This year
     local this_year
     this_year=$(date +%Y)
-    local year_count year_avg
-    read -r year_count year_avg <<< "$(awk -F',' -v y="$this_year" '
-        substr($1,1,4)==y {n++; s+=$3}
-        END {printf "%d %.1f", n+0, (n>0?s/n:0)}
-    ' "$DATA_FILE")"
-
-    # Today
-    local today_count today_avg
-    read -r today_count today_avg <<< "$(awk -F',' -v d="$today" '
-        $1==d {n++; s+=$3}
-        END {printf "%d %.1f", n+0, (n>0?s/n:0)}
+    local year_count year_avg today_count today_avg
+    read -r year_count year_avg today_count today_avg <<< "$(awk -F',' -v y="$this_year" -v d="$today" '
+        substr($1,1,4)==y { yn++; ys+=$3 }
+        $1==d             { dn++; ds+=$3 }
+        END { printf "%d %.1f %d %.1f", yn+0, (yn>0?ys/yn:0), dn+0, (dn>0?ds/dn:0) }
     ' "$DATA_FILE")"
 
     # Best week by avg — aggregate per unique day, group by Mon week start
