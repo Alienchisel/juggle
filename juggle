@@ -2402,7 +2402,6 @@ show_stats() {
     pb=$(personal_best)
 
     local avg sum
-    read -r sum avg <<< "$(awk -F',' '{s+=$3} END {printf "%d %.1f", s, s/NR}' "$DATA_FILE")"
 
     local median
     median=$(sort -t',' -k3,3n "$DATA_FILE" | awk -F',' '
@@ -2484,10 +2483,11 @@ show_stats() {
     local this_year
     this_year=$(date +%Y)
     local year_count year_avg today_count today_avg
-    read -r year_count year_avg today_count today_avg <<< "$(awk -F',' -v y="$this_year" -v d="$today" '
+    read -r sum avg year_count year_avg today_count today_avg <<< "$(awk -F',' -v y="$this_year" -v d="$today" '
+        { ts+=$3; tn++ }
         substr($1,1,4)==y { yn++; ys+=$3 }
         $1==d             { dn++; ds+=$3 }
-        END { printf "%d %.1f %d %.1f", yn+0, (yn>0?ys/yn:0), dn+0, (dn>0?ds/dn:0) }
+        END { printf "%d %.1f %d %.1f %d %.1f", ts+0, (tn>0?ts/tn:0), yn+0, (yn>0?ys/yn:0), dn+0, (dn>0?ds/dn:0) }
     ' "$DATA_FILE")"
 
     # Best week by avg — aggregate per unique day, group by Mon week start
