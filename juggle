@@ -847,6 +847,14 @@ log_score() {
         echo ""
     fi
 
+    if [[ -s "$GOAL_FILE" ]]; then
+        local _gval; _gval=$(< "$GOAL_FILE")
+        if (( catches >= _gval && pb < _gval )); then
+            echo -e "  ${GREEN}${BOLD}The goal is met.${RESET}  ${DIM}(${_gval} catches)${RESET}"
+            echo ""
+        fi
+    fi
+
     check_milestones "$catches" "$total" "$today" "$pb" "$_log_cur_streak" "$_log_best_streak"
     check_codex      "$catches" "$total" "$today" "$pb"
 
