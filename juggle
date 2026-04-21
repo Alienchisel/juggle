@@ -844,7 +844,7 @@ log_score() {
         echo ""
     fi
 
-    check_milestones "$catches" "$total" "$today" "$pb"
+    check_milestones "$catches" "$total" "$today" "$pb" "$_log_cur_streak" "$_log_best_streak"
     check_codex      "$catches" "$total" "$today" "$pb"
 
     # ── Augury line ────────────────────────────────────────────────────────────
@@ -1003,6 +1003,8 @@ check_milestones() {
     local total=$2
     local today=$3
     local pb=$4
+    local cur_streak=$5
+    local best_streak=$6
     local any=0
 
     # ── 1. Catch-count thresholds ──────────────────────────────────────────────
@@ -1052,9 +1054,6 @@ check_milestones() {
     dominance_active=${dominance_active:-0}
     spree_peak=${spree_peak:-0}
     echo_peak=${echo_peak:-0}
-
-    local cur_streak best_streak
-    read -r cur_streak best_streak <<< "$(calc_streaks)"
 
     # Chain peak
     if (( streak_peak >= 3 && cur_streak == 1 && total > 1 )); then
