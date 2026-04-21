@@ -2429,10 +2429,10 @@ show_stats() {
     # This month
     local this_month
     this_month=$(date +%Y-%m)
-    local month_sessions month_avg
-    read -r month_sessions month_avg <<< "$(awk -F',' -v m="$this_month" '
-        $1 ~ m {s+=$3; n++}
-        END {printf "%d %.1f", n+0, (n>0 ? s/n : 0)}
+    local month_sessions month_avg best_this_month
+    read -r month_sessions month_avg best_this_month <<< "$(awk -F',' -v m="$this_month" '
+        $1 ~ m { n++; s+=$3; if ($3+0 > best) best=$3+0 }
+        END { printf "%d %.1f %d", n+0, (n>0?s/n:0), best+0 }
     ' "$DATA_FILE")"
 
     # Best month by average
@@ -2471,8 +2471,6 @@ show_stats() {
     local dow
     dow=$(date +%u)  # 1=Mon, 7=Sun
     week_start=$(date -d "$today -$(( dow - 1 )) days" +%Y-%m-%d)
-    local best_this_month
-    best_this_month=$(awk -F',' -v m="$this_month" '$1 ~ m {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
 
     local this_week_sessions best_this_week this_week_avg
     read -r this_week_sessions best_this_week this_week_avg <<< "$(awk -F',' -v ws="$week_start" '
