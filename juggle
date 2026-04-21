@@ -972,21 +972,16 @@ log_score() {
     check_attendants "$total" "$today"
 
     # ── The Witness ────────────────────────────────────────────────────────────
-    local witness_avg=0
-    if (( total >= 10 )); then
-        witness_avg=$(awk -F',' 'BEGIN{s=0;n=0}{s+=$3+0;n++}END{if(n>0)printf "%.0f",s/n;else print 0}' "$DATA_FILE")
-    fi
-
     if (( catches > pb )); then
         witness_speak "breakthrough"
     elif (( pb >= 3 && ( catches == pb - 1 || catches == pb - 2 ) )); then
         witness_speak "near_miss"
-    elif (( total >= 10 && witness_avg > 0 )); then
-        local _fail_run
-        _fail_run=$(tail -n5 "$DATA_FILE" | awk -F',' -v avg="$witness_avg" 'BEGIN{n=0}{if($3+0<avg+0)n++}END{print n+0}')
+    elif (( _cur_avg_x10 > 0 )); then
+        local _fail_run _rolling_avg=$(( _cur_avg_x10 / 10 ))
+        _fail_run=$(tail -n5 "$DATA_FILE" | awk -F',' -v avg="$_rolling_avg" 'BEGIN{n=0}{if($3+0<avg+0)n++}END{print n+0}')
         if (( _fail_run >= 5 )); then
             witness_speak "failure"
-        elif (( total >= 20 && catches * 2 <= witness_avg )); then
+        elif (( catches * 20 <= _cur_avg_x10 )); then
             witness_speak "bad"
         fi
     fi
