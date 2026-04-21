@@ -3609,6 +3609,7 @@ show_month() {
         -v c1="${DIM}${CYAN}" \
         -v c2="${CYAN}" \
         -v c3="${GREEN}" \
+        -v c4="${YELLOW}" \
         -v rst="$RESET" \
     '
         function jday(y,mo,d,   a,jy,jm) {
@@ -3631,15 +3632,16 @@ show_month() {
             for (day=1; day<=ndays; day++) {
                 date=sprintf("%04d-%02d-%02d",yr,mo,day)
                 v=cnt[date]+0
-                if      (v==0) cc=c0
-                else if (v<=2) cc=c1
-                else if (v<=4) cc=c2
-                else           cc=c3
+                if      (v==0)   cc=c0
+                else if (v<50)   cc=c1
+                else if (v<100)  cc=c2
+                else if (v<200)  cc=c3
+                else             cc=c4
                 printf "%s%2d%s ", cc, day, rst
                 if (++col==7 && day<ndays) { printf "\n  "; col=0 }
             }
-            printf "\n\n  %s▪%s no trials   %s▪%s 1–2   %s▪%s 3–4   %s▪%s 5+%s\n", \
-                c0,rst, c1,rst, c2,rst, c3,rst, rst
+            printf "\n\n  %s▪%s none   %s▪%s 1–49   %s▪%s 50–99   %s▪%s 100–199   %s▪%s 200+%s\n", \
+                c0,rst, c1,rst, c2,rst, c3,rst, c4,rst, rst
         }
     ' "$DATA_FILE"
 
@@ -3841,6 +3843,7 @@ show_year() {
         -v c1="${DIM}${CYAN}█${RESET}" \
         -v c2="${CYAN}█${RESET}" \
         -v c3="${GREEN}█${RESET}" \
+        -v c4="${YELLOW}█${RESET}" \
         -v dim="$DIM" \
         -v rst="$RESET" \
     '
@@ -3883,14 +3886,15 @@ show_year() {
                     d=from_jday(gs+col*7+row)
                     if (substr(d,1,4)+0 != yr0) { printf " "; continue }
                     v=cnt[d]+0
-                    if      (v==0) printf c0
-                    else if (v<=2) printf c1
-                    else if (v<=4) printf c2
-                    else           printf c3
+                    if      (v==0)  printf c0
+                    else if (v<50)  printf c1
+                    else if (v<100) printf c2
+                    else if (v<200) printf c3
+                    else            printf c4
                 }
                 printf "\n"
             }
-            printf "\n  %s· none%s  %s 1–2  %s 3–4  %s 5+%s\n", dim,rst,c1,c2,c3,rst
+            printf "\n  %s· none%s  %s 1–49  %s 50–99  %s 100–199  %s 200+%s\n", dim,rst,c1,c2,c3,c4,rst
         }
     ' "$DATA_FILE"
 
