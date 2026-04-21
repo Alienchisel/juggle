@@ -4213,6 +4213,22 @@ backup_data() {
     echo -e "\n  ${GREEN}Backup saved:${RESET} $dest\n"
 }
 
+check_backup_reminder() {
+    local backup_root="${JUGGLE_BACKUP_DIR:-$SCRIPT_DIR/juggle-backups}"
+    local latest
+    latest=$(ls -d "$backup_root"/juggle-data-* 2>/dev/null | sort | tail -1)
+    if [[ -z "$latest" ]]; then
+        echo -e "\n  ${DIM}Reminder: no backups found — run ${RESET}juggle backup${DIM} to save your data.${RESET}"
+        return
+    fi
+    local ts; ts=$(basename "$latest"); ts="${ts#juggle-data-}"; ts="${ts:0:8}"
+    local days_ago
+    days_ago=$(( ( $(date +%s) - $(date -d "$ts" +%s) ) / 86400 ))
+    if (( days_ago >= 7 )); then
+        echo -e "\n  ${DIM}Reminder: last backup was ${days_ago} days ago — run ${RESET}juggle backup${DIM} to save your data.${RESET}"
+    fi
+}
+
 usage() {
     echo ""
     echo -e "  ${BOLD}IVGVLATOR${RESET} — personal 3-ball juggling score tracker"
@@ -4330,3 +4346,5 @@ case "$1" in
         fi
         ;;
 esac
+
+[[ "$1" != "backup" && "$1" != "--help" && "$1" != "-h" && -n "$1" ]] && check_backup_reminder
