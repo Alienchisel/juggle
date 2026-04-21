@@ -51,6 +51,7 @@ NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
 TITLE_STATE_FILE="$DATA_DIR/title_state"       # 1 if previous trial crossed a title threshold
 DOMINANCE_STREAK_FILE="$DATA_DIR/dominance_streak" # consecutive trials Dominance has been active
 AVG_TREND_FILE="$DATA_DIR/avg_trend"               # rolling avg x10 and up-streak count
+GOAL_FILE="$DATA_DIR/goal"                         # target catch count (optional)
 SCHEMA_VERSION_FILE="$DATA_DIR/.schema_version"
 _CURRENT_SCHEMA=4
 
@@ -970,6 +971,17 @@ log_score() {
         local _pb_count
         _pb_count=$(wc -l < "$PB_FILE")
         (( _pb_count == 4 )) && _context_msgs+=("The Ascent is one record away.")
+    fi
+
+    # Goal proximity — within 20% of target
+    if [[ -s "$GOAL_FILE" ]]; then
+        local _lgoal; _lgoal=$(< "$GOAL_FILE")
+        if (( display_pb < _lgoal )); then
+            local _lrem=$(( _lgoal - display_pb ))
+            local _lthresh=$(( _lgoal / 5 ))
+            (( _lthresh < 15 )) && _lthresh=15
+            (( _lrem <= _lthresh )) && _context_msgs+=("${_lrem} catches from the goal.")
+        fi
     fi
 
     # Display one at random
@@ -2666,6 +2678,16 @@ show_stats() {
     else
         echo -e "  ${BOLD}Next title    :${RESET}  ${DIM}none — maximum title reached${RESET}"
     fi
+    if [[ -s "$GOAL_FILE" ]]; then
+        local _sgoal; _sgoal=$(< "$GOAL_FILE")
+        local _sbar; _sbar=$(_goal_bar "$pb" "$_sgoal")
+        if (( pb >= _sgoal )); then
+            echo -e "  ${BOLD}Goal          :${RESET}  ${GREEN}${BOLD}ACHIEVED${RESET}  ${DIM}(${_sgoal} catches)${RESET}"
+        else
+            local _srem=$(( _sgoal - pb ))
+            echo -e "  ${BOLD}Goal          :${RESET}  ${pb} / ${_sgoal} catches  ${DIM}[${_sbar}]  ${_srem} to go${RESET}"
+        fi
+    fi
     local stats_grade_info stats_grade stats_grade_colour
     stats_grade_info=$(get_grade "$last_catches" "$pb")
     stats_grade="${stats_grade_info%%|*}"
@@ -4191,6 +4213,64 @@ show_lore() {
 
 # ── Usage ──────────────────────────────────────────────────────────────────────
 
+_goal_bar() {
+    local pb=$1 goal=$2 bar_width=20
+    local filled=$(( pb * bar_width / goal ))
+    (( filled > bar_width )) && filled=$bar_width
+    local bar="" _b
+    for (( _b=0; _b<bar_width; _b++ )); do
+        if   (( _b < filled ));  then bar+="="
+        elif (( _b == filled )); then bar+=">"
+        else bar+=" "; fi
+    done
+    echo "$bar"
+}
+
+goal_cmd() {
+    local arg="${1:-}"
+    if [[ "$arg" == "clear" ]]; then
+        rm -f "$GOAL_FILE"
+        echo -e "\n  ${DIM}Goal cleared.${RESET}\n"
+        return
+    fi
+    if [[ "$arg" =~ ^[0-9]+$ ]] && (( arg >= 1 )); then
+        echo "$arg" > "$GOAL_FILE"
+        local pb; pb=$(personal_best)
+        local bar; bar=$(_goal_bar "$pb" "$arg")
+        echo ""
+        if (( pb >= arg )); then
+            echo -e "  ${BOLD}Goal set:${RESET}  ${arg} catches  ${GREEN}${BOLD}(already achieved!)${RESET}"
+        else
+            local remaining=$(( arg - pb ))
+            echo -e "  ${BOLD}Goal set:${RESET}  ${pb} / ${arg} catches  ${DIM}[${bar}]  ${remaining} to go${RESET}"
+        fi
+        echo ""
+        return
+    fi
+    if [[ -n "$arg" ]]; then
+        echo -e "\n  ${RED}Usage:${RESET} juggle goal <N>  |  juggle goal clear\n"
+        return 1
+    fi
+    if [[ ! -s "$GOAL_FILE" ]]; then
+        echo -e "\n  ${DIM}No goal set. Use ${RESET}juggle goal <N>${DIM} to set one.${RESET}\n"
+        return
+    fi
+    local goal pb
+    goal=$(< "$GOAL_FILE")
+    pb=$(personal_best)
+    local bar; bar=$(_goal_bar "$pb" "$goal")
+    gum_header "IVGVLATOR"$'\n'"· THE PURSUIT ·"
+    echo ""
+    if (( pb >= goal )); then
+        echo -e "  ${BOLD}Goal          :${RESET}  ${GREEN}${BOLD}ACHIEVED${RESET}  ${DIM}(${goal} catches)${RESET}"
+        echo -e "  ${BOLD}Current Apex  :${RESET}  ${pb} catches"
+    else
+        local remaining=$(( goal - pb ))
+        echo -e "  ${BOLD}Goal          :${RESET}  ${pb} / ${goal} catches  ${DIM}[${bar}]  ${remaining} to go${RESET}"
+    fi
+    echo ""
+}
+
 backup_data() {
     local backup_root="${JUGGLE_BACKUP_DIR:-$SCRIPT_DIR/juggle-backups}"
     local ts; ts=$(date +"%Y%m%dT%H%M%S")
@@ -4240,6 +4320,9 @@ usage() {
     echo -e "    juggle lore               All systems explained: Omens, Auguries, Grades & more"
     echo -e "    juggle codex              The Codex: permanent discoveries & achievements"
     echo -e "    juggle backup             Snapshot juggle-data/ to a timestamped backup"
+    echo -e "    juggle goal               Show current goal and progress"
+    echo -e "    juggle goal ${CYAN}<N>${RESET}           Set a target catch count"
+    echo -e "    juggle goal clear         Remove the current goal"
     echo -e "    juggle --help             Show this help"
     echo ""
     echo -e "  ${DIM}Data stored in: ${DATA_DIR}/${RESET}"
@@ -4327,6 +4410,9 @@ case "$1" in
     backup)
         backup_data
         ;;
+    goal)
+        goal_cmd "$2"
+        ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 )); then
             log_score "$1"
@@ -4337,4 +4423,4 @@ case "$1" in
         ;;
 esac
 
-[[ "$1" != "backup" && "$1" != "--help" && "$1" != "-h" && -n "$1" ]] && check_backup_reminder
+case "$1" in backup|goal|--help|-h|"") ;; *) check_backup_reminder ;; esac
