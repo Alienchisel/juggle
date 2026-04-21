@@ -771,11 +771,7 @@ log_score() {
     fi
 
     local rank
-    rank=$(all_scores_sorted | awk -F',' -v score="$catches" -v date="$today" -v time="$now" '
-        { entry_score=$3; entry_date=$1; entry_time=$2 }
-        entry_score == score && entry_date == date && entry_time == time && !found { rank=NR; found=1 }
-        END { print rank+0 }
-    ')
+    rank=$(awk -F',' -v c="$catches" '$3+0 > c+0 {n++} END {print n+1}' "$DATA_FILE")
 
     local top_pct=$(( rank * 100 / total ))
     (( top_pct < 1 )) && top_pct=1
