@@ -4213,9 +4213,11 @@ backup_data() {
 
 check_backup_reminder() {
     local backup_root="${JUGGLE_BACKUP_DIR:-$SCRIPT_DIR/juggle-backups}"
-    local latest
-    latest=$(ls -d "$backup_root"/juggle-data-* 2>/dev/null | sort | tail -1)
-    if [[ -z "$latest" ]]; then
+    local latest="" f
+    for f in "$backup_root"/juggle-data-*/; do
+        [[ -d "$f" && "${f%/}" > "$latest" ]] && latest="${f%/}"
+    done
+    if [[ -z "$latest" || "$latest" == "$backup_root/juggle-data-" ]]; then
         echo -e "\n  ${DIM}Reminder: no backups found — run ${RESET}juggle backup${DIM} to save your data.${RESET}"
         return
     fi
