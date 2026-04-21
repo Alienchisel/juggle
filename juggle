@@ -276,11 +276,12 @@ total_sessions() {
 }
 
 declare -A _CODEX_CACHE=()
+declare -A _CODEX_DATE_CACHE=()
 declare -A _MILESTONE_CACHE=()
 
 load_caches() {
-    while IFS=',' read -r key _; do
-        [[ -n "$key" ]] && _CODEX_CACHE["$key"]=1
+    while IFS=',' read -r key date; do
+        [[ -n "$key" ]] && _CODEX_CACHE["$key"]=1 && _CODEX_DATE_CACHE["$key"]="$date"
     done < "$CODEX_FILE"
     while IFS=',' read -r type key _; do
         [[ -n "$type" && -n "$key" ]] && _MILESTONE_CACHE["${type},${key}"]=1
@@ -308,6 +309,7 @@ codex_discovered() {
 record_codex() {
     local key=$1 date=$2
     _CODEX_CACHE["$key"]=1
+    _CODEX_DATE_CACHE["$key"]="$date"
     echo "${key},${date}" >> "$CODEX_FILE"
 }
 
@@ -761,7 +763,7 @@ log_score() {
     # The Witnessed Ascent — historical backfill
     if ! codex_discovered "WITNESSED_ASCENT" && codex_discovered "ATTENDANT_2"; then
         local att2_date pb_after
-        att2_date=$(grep "^ATTENDANT_2," "$CODEX_FILE" | cut -d',' -f2)
+        att2_date="${_CODEX_DATE_CACHE[ATTENDANT_2]}"
         pb_after=$(awk -F',' -v d="$att2_date" '$1 > d {print $1; exit}' "$PB_FILE")
         if [[ -n "$pb_after" ]]; then
             record_codex "WITNESSED_ASCENT" "$pb_after"
@@ -1763,9 +1765,7 @@ check_codex() {
 
     # The Archivist — 25 entries discovered
     if ! codex_discovered "ARCHIVIST"; then
-        local _disc
-        _disc=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        if (( _disc >= 25 )); then
+        if (( ${#_CODEX_CACHE[@]} >= 25 )); then
             record_codex "ARCHIVIST" "$today"
             print_codex_discovery "The Archivist" "Twenty-five entries recorded in the Codex."
             any=1
@@ -1774,9 +1774,7 @@ check_codex() {
 
     # Omnia — all other entries discovered
     if ! codex_discovered "OMNIA"; then
-        local _disc_omnia
-        _disc_omnia=$(grep -c ',' "$CODEX_FILE" 2>/dev/null || echo 0)
-        if (( _disc_omnia >= ${#_CODEX_ALL_KEYS[@]} - 1 )); then
+        if (( ${#_CODEX_CACHE[@]} >= ${#_CODEX_ALL_KEYS[@]} - 1 )); then
             record_codex "OMNIA" "$today"
             print_codex_discovery "Omnia" "The record complete."
             any=1
@@ -1875,7 +1873,7 @@ show_codex() {
         local key="${keys[$i]}"
         if codex_discovered "$key"; then
             local entry_date
-            entry_date=$(grep "^${key}," "$CODEX_FILE" | cut -d',' -f2)
+            entry_date="${_CODEX_DATE_CACHE[$key]}"
             printf "  ${YELLOW}${BOLD}%-26s${RESET}  ${DIM}—  %s${RESET}\n" "${names[$i]}" "$entry_date"
             echo -e "  ${DIM}${descs[$i]}${RESET}"
             echo ""
