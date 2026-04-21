@@ -2471,17 +2471,14 @@ show_stats() {
     local dow
     dow=$(date +%u)  # 1=Mon, 7=Sun
     week_start=$(date -d "$today -$(( dow - 1 )) days" +%Y-%m-%d)
-    local this_week_sessions
-    this_week_sessions=$(awk -F',' -v ws="$week_start" '$1 >= ws' "$DATA_FILE" | wc -l | tr -d ' ')
-
-    local best_this_week best_this_month
-    best_this_week=$(awk -F',' -v ws="$week_start" '$1 >= ws {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
+    local best_this_month
     best_this_month=$(awk -F',' -v m="$this_month" '$1 ~ m {if ($3+0 > best) best=$3+0} END {print best+0}' "$DATA_FILE")
 
-    # This week avg
-    local this_week_avg
-    this_week_avg=$(awk -F',' -v ws="$week_start" \
-        '$1>=ws {s+=$3; n++} END {printf "%.1f", (n>0?s/n:0)}' "$DATA_FILE")
+    local this_week_sessions best_this_week this_week_avg
+    read -r this_week_sessions best_this_week this_week_avg <<< "$(awk -F',' -v ws="$week_start" '
+        $1 >= ws { n++; s+=$3; if ($3+0 > best) best=$3+0 }
+        END { printf "%d %d %.1f", n+0, best+0, (n>0?s/n:0) }
+    ' "$DATA_FILE")"
     local week_label
     week_label="$(date -d "$week_start" '+%b %-d') – $(date -d "$today" '+%b %-d')"
 
