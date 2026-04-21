@@ -3598,6 +3598,51 @@ show_month() {
         echo -e "  ${DIM}${_gloss}${RESET}"
     fi
 
+    # ── Calendar grid ────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}CALENDAR${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    awk -F',' \
+        -v m="$target_month" \
+        -v c0="${DIM}" \
+        -v c1="${DIM}${CYAN}" \
+        -v c2="${CYAN}" \
+        -v c3="${GREEN}" \
+        -v rst="$RESET" \
+    '
+        function jday(y,mo,d,   a,jy,jm) {
+            a=int((14-mo)/12); jy=y+4800-a; jm=mo+12*a-3
+            return d+int((153*jm+2)/5)+365*jy+int(jy/4)-int(jy/100)+int(jy/400)-32045
+        }
+        substr($1,1,7)==m { cnt[$1]++ }
+        END {
+            yr=substr(m,1,4)+0; mo=substr(m,6,2)+0
+            mlen[1]=31; mlen[2]=((yr%4==0&&yr%100!=0)||yr%400==0)?29:28
+            mlen[3]=31; mlen[4]=30; mlen[5]=31; mlen[6]=30
+            mlen[7]=31; mlen[8]=31; mlen[9]=30; mlen[10]=31; mlen[11]=30; mlen[12]=31
+            ndays=mlen[mo]
+            mon0=jday(2001,1,1)
+            dow1=(jday(yr,mo,1)-mon0)%7; if (dow1<0) dow1+=7
+
+            printf "  Mo Tu We Th Fr Sa Su\n  "
+            for (d=0; d<dow1; d++) printf "   "
+            col=dow1
+            for (day=1; day<=ndays; day++) {
+                date=sprintf("%04d-%02d-%02d",yr,mo,day)
+                v=cnt[date]+0
+                if      (v==0) cc=c0
+                else if (v<=2) cc=c1
+                else if (v<=4) cc=c2
+                else           cc=c3
+                printf "%s%2d%s ", cc, day, rst
+                if (++col==7 && day<ndays) { printf "\n  "; col=0 }
+            }
+            printf "\n\n  %s▪%s no trials   %s▪%s 1–2   %s▪%s 3–4   %s▪%s 5+%s\n", \
+                c0,rst, c1,rst, c2,rst, c3,rst, rst
+        }
+    ' "$DATA_FILE"
+
     # Per-week breakdown
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
