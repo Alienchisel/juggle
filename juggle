@@ -2418,7 +2418,7 @@ show_stats() {
 
     # Days since Apex
     local pb_date
-    pb_date=$(awk -F',' -v pb="$pb" '$3==pb && !found {print $1; found=1}' "$DATA_FILE")
+    pb_date=$(tail -n1 "$PB_FILE" | cut -d',' -f1)
     local today
     today=$(date +%Y-%m-%d)
     local days_since_pb=0
