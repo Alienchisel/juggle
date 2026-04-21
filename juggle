@@ -2931,38 +2931,38 @@ show_stats() {
     echo -e "  ${BOLD}TRIAL LEDGER${RESET}"
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
 
-    # Build bands up to highest score ever recorded (rounded up to next band)
-    local highest
-    highest=$(awk -F',' 'BEGIN{m=0} $3>m{m=$3} END{print m}' "$DATA_FILE")
+    # Single pass: find highest score and count per band (band = floor($3/5)*5)
+    local -A _band_counts=()
+    local highest=0 band_max=0
+    local _ld _b _c
+    read -r _ld <<< "$(awk -F',' '
+        { if ($3+0>mx) mx=$3+0; cnt[int($3/5)*5]++ }
+        END { printf "%d", mx+0; for (b in cnt) printf " %d %d", b, cnt[b] }
+    ' "$DATA_FILE")"
+    local _lda=($_ld)
+    highest=${_lda[0]:-0}
+    for (( _li=1; _li<${#_lda[@]}; _li+=2 )); do
+        _b=${_lda[_li]}; _c=${_lda[_li+1]}
+        _band_counts[$_b]=$_c
+        (( _c > band_max )) && band_max=$_c
+    done
+
     local max_band=$(( ( (highest / 5) + 1 ) * 5 ))
 
     # Find widest label for alignment (zero-padded starts below 10)
     local widest=0
     for (( band=0; band<max_band; band+=5 )); do
         local band_end=$(( band + 4 ))
-        local label_start
+        local label_start label_end
         printf -v label_start "%02d" "$band"
-        local label_end
         printf -v label_end "%02d" "$band_end"
-        local lw=${#label_start}
-        local ew=${#label_end}
-        local total_w=$(( lw + 1 + ew ))
+        local total_w=$(( ${#label_start} + 1 + ${#label_end} ))
         (( total_w > widest )) && widest=$total_w
     done
 
-    # Find max count for bar scaling (only non-empty bands)
-    local band_max=0
     for (( band=0; band<max_band; band+=5 )); do
         local band_end=$(( band + 4 ))
-        local count
-        count=$(awk -F',' -v lo="$band" -v hi="$band_end" '$3>=lo && $3<=hi' "$DATA_FILE" | wc -l | tr -d ' ')
-        (( count > band_max )) && band_max=$count
-    done
-
-    for (( band=0; band<max_band; band+=5 )); do
-        local band_end=$(( band + 4 ))
-        local count
-        count=$(awk -F',' -v lo="$band" -v hi="$band_end" '$3>=lo && $3<=hi' "$DATA_FILE" | wc -l | tr -d ' ')
+        local count=${_band_counts[$band]:-0}
         # Skip empty bands
         (( count == 0 )) && continue
         local label_start label_end
