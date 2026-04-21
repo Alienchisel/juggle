@@ -19,6 +19,7 @@
 #   juggle undo           Remove the most recent entry (with confirmation)
 #   juggle lore           Explain all systems (Omens, Auguries, Grades, Titles, etc.)
 #   juggle codex          The Codex: permanent discoveries & achievements
+#   juggle backup         Snapshot juggle-data/ to a timestamped backup
 #   juggle --help         Show usage help
 #
 # Data files (default: alongside this script in ./juggle-data/; override with $JUGGLE_DATA_DIR):
@@ -4203,6 +4204,15 @@ show_lore() {
 
 # ── Usage ──────────────────────────────────────────────────────────────────────
 
+backup_data() {
+    local backup_root="${JUGGLE_BACKUP_DIR:-$SCRIPT_DIR/juggle-backups}"
+    local ts; ts=$(date +"%Y%m%dT%H%M%S")
+    local dest="$backup_root/juggle-data-$ts"
+    mkdir -p "$backup_root"
+    cp -r "$DATA_DIR" "$dest"
+    echo -e "\n  ${GREEN}Backup saved:${RESET} $dest\n"
+}
+
 usage() {
     echo ""
     echo -e "  ${BOLD}IVGVLATOR${RESET} — personal 3-ball juggling score tracker"
@@ -4224,6 +4234,7 @@ usage() {
     echo -e "    juggle undo               Remove most recent entry"
     echo -e "    juggle lore               All systems explained: Omens, Auguries, Grades & more"
     echo -e "    juggle codex              The Codex: permanent discoveries & achievements"
+    echo -e "    juggle backup             Snapshot juggle-data/ to a timestamped backup"
     echo -e "    juggle --help             Show this help"
     echo ""
     echo -e "  ${DIM}Data stored in: ${DATA_DIR}/${RESET}"
@@ -4306,6 +4317,9 @@ case "$1" in
         ;;
     codex)
         show_codex | gum_pager
+        ;;
+    backup)
+        backup_data
         ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 )); then
