@@ -258,7 +258,8 @@ all_scores_sorted() {
 }
 
 personal_best() {
-    awk -F',' 'NR==1 || $3>max {max=$3} END {print max+0}' "$DATA_FILE"
+    [[ -s "$PB_FILE" ]] && { tail -n1 "$PB_FILE" | cut -d',' -f3; return; }
+    echo 0
 }
 
 echo_count() {
