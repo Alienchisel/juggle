@@ -51,6 +51,8 @@ NEMESIS_FILE="$DATA_DIR/nemesis_state"   # tracked nemesis: score,count
 TITLE_STATE_FILE="$DATA_DIR/title_state"       # 1 if previous trial crossed a title threshold
 DOMINANCE_STREAK_FILE="$DATA_DIR/dominance_streak" # consecutive trials Dominance has been active
 AVG_TREND_FILE="$DATA_DIR/avg_trend"               # rolling avg x10 and up-streak count
+SCHEMA_VERSION_FILE="$DATA_DIR/.schema_version"
+_CURRENT_SCHEMA=4
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 RED='\033[0;31m'
@@ -136,81 +138,21 @@ check_dependencies() {
 
 init_data() {
     mkdir -p "$DATA_DIR"
-    touch "$DATA_FILE"
-    touch "$MILESTONE_FILE"
-    touch "$PB_FILE"
-    [[ ! -f "$WITNESS_FILE" ]] && echo "0" > "$WITNESS_FILE"
-    [[ ! -f "$NEMESIS_FILE" ]] && echo "0,0" > "$NEMESIS_FILE"
-    [[ ! -f "$TITLE_STATE_FILE" ]] && echo "0" > "$TITLE_STATE_FILE"
-    if [[ ! -f "$DOMINANCE_STREAK_FILE" ]]; then
-        echo "0,0" > "$DOMINANCE_STREAK_FILE"
-    elif [[ $(awk -F',' '{print NF; exit}' "$DOMINANCE_STREAK_FILE") == "1" ]]; then
-        local _dsv; _dsv=$(cat "$DOMINANCE_STREAK_FILE")
-        echo "${_dsv},${_dsv}" > "$DOMINANCE_STREAK_FILE"
-    fi
-    [[ ! -f "$AVG_TREND_FILE" ]] && echo "0,0" > "$AVG_TREND_FILE"
+    touch "$DATA_FILE" "$MILESTONE_FILE" "$PB_FILE"
+    [[ ! -f "$WITNESS_FILE" ]]          && echo "0"       > "$WITNESS_FILE"
+    [[ ! -f "$NEMESIS_FILE" ]]          && echo "0,0"     > "$NEMESIS_FILE"
+    [[ ! -f "$TITLE_STATE_FILE" ]]      && echo "0"       > "$TITLE_STATE_FILE"
+    [[ ! -f "$DOMINANCE_STREAK_FILE" ]] && echo "0,0"     > "$DOMINANCE_STREAK_FILE"
+    [[ ! -f "$AVG_TREND_FILE" ]]        && echo "0,0"     > "$AVG_TREND_FILE"
+    [[ ! -f "$CODEX_FILE" ]]            && touch "$CODEX_FILE"
+    [[ ! -s "$STREAK_FILE" ]]           && echo "0,0,0,0,0" > "$STREAK_FILE"
 
-    # Migrate scores.csv to current format (date,time,catches,grade)
-    local score_fields
-    score_fields=$(awk -F',' 'NF{print NF; exit}' "$DATA_FILE")
-    if [[ -n "$score_fields" && "$score_fields" != "4" ]]; then
-        if (( score_fields == 2 )); then
-            local tmp
-            tmp=$(mktemp)
-            awk -F',' 'BEGIN{OFS=","} NF==2{print $1,"00:00:00",$2; next} {print}' "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
-            score_fields=3
-        fi
-        if (( score_fields == 3 )); then
-            # Backfill grade field for pre-4.0 data.
-            # Grades are reconstructed as "grade against the running PB at time of
-            # entry": each row is graded against the highest catch seen so far in
-            # file order. This matches the intent of log_score() — stored grade
-            # reflects how the trial ranked against the Apex that existed when it
-            # was logged, not today's Apex. For entries with 00:00:00 timestamps
-            # (bulk-imported or early data) file order is used as a best approximation.
-            local tmp
-            tmp=$(mktemp)
-            awk -F',' 'BEGIN{OFS=","; max=0} {
-                if ($3+0 > max) max=$3+0
-                pct = (max > 0) ? int($3*100/max) : 0
-                if      (pct >= 100) g="SSS"
-                else if (pct >= 90)  g="SS"
-                else if (pct >= 80)  g="S"
-                else if (pct >= 65)  g="A"
-                else if (pct >= 50)  g="B"
-                else if (pct >= 35)  g="C"
-                else if (pct >= 20)  g="D"
-                else                 g="F"
-                print $1,$2,$3,g
-            }' "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
-        fi
-    fi
+    # Fast path: all migrations already applied
+    [[ -f "$SCHEMA_VERSION_FILE" && "$(<"$SCHEMA_VERSION_FILE")" == "$_CURRENT_SCHEMA" ]] && return
 
-    # Migrate pb_history.csv from date,catches → date,time,catches
-    local pb_fields
-    pb_fields=$(awk -F',' 'NF{print NF; exit}' "$PB_FILE")
-    if [[ -n "$pb_fields" && "$pb_fields" != "3" ]]; then
-        if (( pb_fields == 2 )); then
-            local tmp
-            tmp=$(mktemp)
-            awk -F',' 'BEGIN{OFS=","} NF==2{print $1,"00:00:00",$2; next} {print}' "$PB_FILE" > "$tmp" && mv "$tmp" "$PB_FILE"
-        fi
-    fi
+    # ── Migrations ────────────────────────────────────────────────────────────
 
-    # Backfill pb_history.csv from scores.csv if incomplete
-    if [[ -s "$DATA_FILE" ]]; then
-        local expected_pb_count actual_pb_count
-        expected_pb_count=$(awk -F',' 'BEGIN{max=0} $3>max{max=$3; c++} END{print c+0}' "$DATA_FILE")
-        actual_pb_count=0
-        [[ -s "$PB_FILE" ]] && actual_pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
-        if (( expected_pb_count > actual_pb_count )); then
-            awk -F',' 'BEGIN{max=0} $3>max{max=$3; print}' "$DATA_FILE" > "$PB_FILE"
-        fi
-    fi
-
-    # streak_state.csv: streak_peak,spree_count,dominance_active,spree_peak,echo_peak
-    [[ ! -s "$STREAK_FILE" ]] && echo "0,0,0,0,0" > "$STREAK_FILE"
-    # Migrate old formats
+    # streak_state.csv: migrate old formats
     local fields
     fields=$(awk -F',' 'NR==1{print NF; exit}' "$STREAK_FILE")
     if (( fields == 6 )); then
@@ -221,6 +163,12 @@ init_data() {
         local f1 f2 f3
         IFS=',' read -r f1 f2 f3 < "$STREAK_FILE"
         echo "${f1:-0},${f2:-0},${f3:-0},0,0" > "$STREAK_FILE"
+    fi
+
+    # dominance_streak: migrate single-value format
+    if [[ $(awk -F',' '{print NF; exit}' "$DOMINANCE_STREAK_FILE") == "1" ]]; then
+        local _dsv; _dsv=$(< "$DOMINANCE_STREAK_FILE")
+        echo "${_dsv},${_dsv}" > "$DOMINANCE_STREAK_FILE"
     fi
 
     # milestones.csv: migrate type,key → type,key,date
@@ -249,8 +197,58 @@ init_data() {
         fi
     fi
 
-    # codex.csv: persistent discovery log (key,date)
-    [[ ! -f "$CODEX_FILE" ]] && touch "$CODEX_FILE"
+    # scores.csv: migrate to current format (date,time,catches,grade)
+    local score_fields
+    score_fields=$(awk -F',' 'NF{print NF; exit}' "$DATA_FILE")
+    if [[ -n "$score_fields" && "$score_fields" != "4" ]]; then
+        if (( score_fields == 2 )); then
+            local tmp
+            tmp=$(mktemp)
+            awk -F',' 'BEGIN{OFS=","} NF==2{print $1,"00:00:00",$2; next} {print}' "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
+            score_fields=3
+        fi
+        if (( score_fields == 3 )); then
+            local tmp
+            tmp=$(mktemp)
+            awk -F',' 'BEGIN{OFS=","; max=0} {
+                if ($3+0 > max) max=$3+0
+                pct = (max > 0) ? int($3*100/max) : 0
+                if      (pct >= 100) g="SSS"
+                else if (pct >= 90)  g="SS"
+                else if (pct >= 80)  g="S"
+                else if (pct >= 65)  g="A"
+                else if (pct >= 50)  g="B"
+                else if (pct >= 35)  g="C"
+                else if (pct >= 20)  g="D"
+                else                 g="F"
+                print $1,$2,$3,g
+            }' "$DATA_FILE" > "$tmp" && mv "$tmp" "$DATA_FILE"
+        fi
+    fi
+
+    # pb_history.csv: migrate date,catches → date,time,catches
+    local pb_fields
+    pb_fields=$(awk -F',' 'NF{print NF; exit}' "$PB_FILE")
+    if [[ -n "$pb_fields" && "$pb_fields" != "3" ]]; then
+        if (( pb_fields == 2 )); then
+            local tmp
+            tmp=$(mktemp)
+            awk -F',' 'BEGIN{OFS=","} NF==2{print $1,"00:00:00",$2; next} {print}' "$PB_FILE" > "$tmp" && mv "$tmp" "$PB_FILE"
+        fi
+    fi
+
+    # pb_history.csv: backfill from scores.csv if incomplete
+    if [[ -s "$DATA_FILE" ]]; then
+        local expected_pb_count actual_pb_count
+        expected_pb_count=$(awk -F',' 'BEGIN{max=0} $3>max{max=$3; c++} END{print c+0}' "$DATA_FILE")
+        actual_pb_count=0
+        [[ -s "$PB_FILE" ]] && actual_pb_count=$(wc -l < "$PB_FILE" | tr -d ' ')
+        if (( expected_pb_count > actual_pb_count )); then
+            awk -F',' 'BEGIN{max=0} $3>max{max=$3; print}' "$DATA_FILE" > "$PB_FILE"
+        fi
+    fi
+
+    echo "$_CURRENT_SCHEMA" > "$SCHEMA_VERSION_FILE"
 }
 
 all_scores_sorted() {
