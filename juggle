@@ -277,13 +277,25 @@ total_sessions() {
     wc -l < "$DATA_FILE" | tr -d ' '
 }
 
+declare -A _CODEX_CACHE=()
+declare -A _MILESTONE_CACHE=()
+
+load_caches() {
+    while IFS=',' read -r key _; do
+        [[ -n "$key" ]] && _CODEX_CACHE["$key"]=1
+    done < "$CODEX_FILE"
+    while IFS=',' read -r type key _; do
+        [[ -n "$type" && -n "$key" ]] && _MILESTONE_CACHE["${type},${key}"]=1
+    done < "$MILESTONE_FILE"
+}
+
 milestone_fired() {
-    local type=$1 key=$2
-    grep -qF "${type},${key}" "$MILESTONE_FILE" 2>/dev/null
+    [[ "${_MILESTONE_CACHE[$1,$2]}" == 1 ]]
 }
 
 record_milestone() {
     local type=$1 key=$2 date=$3
+    _MILESTONE_CACHE["${type},${key}"]=1
     echo "${type},${key},${date}" >> "$MILESTONE_FILE"
 }
 
@@ -292,12 +304,12 @@ print_milestone() {
 }
 
 codex_discovered() {
-    local key=$1
-    grep -qF "${key}," "$CODEX_FILE" 2>/dev/null
+    [[ "${_CODEX_CACHE[$1]}" == 1 ]]
 }
 
 record_codex() {
     local key=$1 date=$2
+    _CODEX_CACHE["$key"]=1
     echo "${key},${date}" >> "$CODEX_FILE"
 }
 
@@ -4258,6 +4270,7 @@ usage() {
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 init_data
+load_caches
 check_dependencies
 
 case "$1" in
