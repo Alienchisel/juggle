@@ -3785,6 +3785,70 @@ show_year() {
         echo -e "  ${DIM}${_gloss}${RESET}"
     fi
 
+    # ── Activity heatmap ─────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    echo -e "  ${BOLD}ACTIVITY${RESET}"
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    awk -F',' \
+        -v yr="$target_year" \
+        -v c0="${DIM}·${RESET}" \
+        -v c1="${DIM}${CYAN}█${RESET}" \
+        -v c2="${CYAN}█${RESET}" \
+        -v c3="${GREEN}█${RESET}" \
+        -v dim="$DIM" \
+        -v rst="$RESET" \
+    '
+        function jday(y,m,d,   a,jy,jm) {
+            a=int((14-m)/12); jy=y+4800-a; jm=m+12*a-3
+            return d+int((153*jm+2)/5)+365*jy+int(jy/4)-int(jy/100)+int(jy/400)-32045
+        }
+        function from_jday(j,   l,n,i,k,d,m,y) {
+            l=j+68569; n=int(4*l/146097); l=l-int((146097*n+3)/4)
+            i=int(4000*(l+1)/1461001); l=l-int(1461*i/4)+31; k=int(80*l/2447)
+            d=l-int(2447*k/80); l=int(k/11); m=k+2-12*l; y=100*(n-49)+i+l
+            return sprintf("%04d-%02d-%02d",y,m,d)
+        }
+        substr($1,1,4)==yr { cnt[$1]++ }
+        END {
+            split("Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec", mn)
+            yr0=yr+0
+            j1=jday(yr0,1,1); j2=jday(yr0,12,31)
+            mon0=jday(2001,1,1)
+            dow1=(j1-mon0)%7; if (dow1<0) dow1+=7
+            gs=j1-dow1; nw=int((j2-gs)/7)+1
+
+            # Month label row
+            printf "       "
+            pm=-1; skip=0
+            for (c=0; c<nw; c++) {
+                d=from_jday(gs+c*7)
+                m=substr(d,6,2)+0; y=substr(d,1,4)+0
+                if (y==yr0 && m!=pm) { printf "%-3s",mn[m]; pm=m; skip=2 }
+                else if (skip>0)     { skip-- }
+                else                 { printf " " }
+            }
+            printf "\n"
+
+            # Day rows (Mon–Sun)
+            rl[0]="Mon"; rl[1]="   "; rl[2]="Wed"; rl[3]="   "; rl[4]="Fri"; rl[5]="   "; rl[6]="Sun"
+            for (row=0; row<7; row++) {
+                printf "  %s  ", rl[row]
+                for (col=0; col<nw; col++) {
+                    d=from_jday(gs+col*7+row)
+                    if (substr(d,1,4)+0 != yr0) { printf " "; continue }
+                    v=cnt[d]+0
+                    if      (v==0) printf c0
+                    else if (v<=2) printf c1
+                    else if (v<=4) printf c2
+                    else           printf c3
+                }
+                printf "\n"
+            }
+            printf "\n  %s· none%s  %s 1–2  %s 3–4  %s 5+%s\n", dim,rst,c1,c2,c3,rst
+        }
+    ' "$DATA_FILE"
+
     # Per-month breakdown
     echo ""
     echo -e "  ${DIM}──────────────────────────────────────${RESET}"
