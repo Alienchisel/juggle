@@ -35,6 +35,7 @@ if command -v readlink >/dev/null 2>&1; then
 fi
 SCRIPT_DIR="$(cd -- "$(dirname -- "$SCRIPT_PATH")" && pwd)"
 DATA_DIR="${JUGGLE_DATA_DIR:-$SCRIPT_DIR/juggle-data}"
+mkdir -p "$DATA_DIR"
 DATA_FILE="$DATA_DIR/scores.csv"
 MILESTONE_FILE="$DATA_DIR/milestones.csv"
 PB_FILE="$DATA_DIR/pb_history.csv"
