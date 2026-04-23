@@ -2989,6 +2989,7 @@ show_stats() {
         local total_w=$(( ${#label_start} + 1 + ${#label_end} ))
         (( total_w > widest )) && widest=$total_w
     done
+    widest=$(( widest + 2 ))  # en dash is 3 bytes; printf %*s counts bytes not visual chars
 
     for (( band=0; band<max_band; band+=5 )); do
         local band_end=$(( band + 4 ))
