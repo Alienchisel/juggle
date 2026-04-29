@@ -4723,7 +4723,34 @@ _juggle_version() {
 }
 
 show_version() {
-    echo "juggle $(_juggle_version)"
+    local v gum_status date_status flock_status
+    v=$(_juggle_version)
+    if command -v gum &>/dev/null; then
+        gum_status="${GREEN}$(gum --version 2>/dev/null | head -1)${RESET}"
+    else
+        gum_status="${RED}missing${RESET}"
+    fi
+    if date -d "today" &>/dev/null; then
+        date_status="${GREEN}GNU coreutils${RESET}"
+    else
+        date_status="${RED}missing or non-GNU${RESET}"
+    fi
+    if command -v flock &>/dev/null; then
+        flock_status="${GREEN}present${RESET}"
+    else
+        flock_status="${YELLOW}missing (optional)${RESET}"
+    fi
+    echo ""
+    echo -e "  ${BOLD}IVGVLATOR${RESET}"
+    echo -e "  ${DIM}──────────────────────${RESET}"
+    echo -e "  script version:  ${BOLD}${v}${RESET}"
+    echo -e "  schema version:  ${BOLD}${_CURRENT_SCHEMA}${RESET}"
+    echo -e "  data dir:        ${DATA_DIR}"
+    echo -e "  ${DIM}──────────────────────${RESET}"
+    echo -e "  gum:             ${gum_status}"
+    echo -e "  GNU date:        ${date_status}"
+    echo -e "  flock:           ${flock_status}"
+    echo ""
 }
 
 usage() {
@@ -4763,7 +4790,7 @@ usage() {
     echo -e "  ${DIM}  streak_state.csv — chain / omen state${RESET}"
     echo -e "  ${DIM}  codex.csv        — discovery log (key,date)${RESET}"
     echo ""
-    echo -e "  ${DIM}$(show_version)${RESET}"
+    echo -e "  ${DIM}juggle $(_juggle_version)${RESET}"
     echo ""
 }
 
