@@ -4683,16 +4683,17 @@ show_doctor() {
             NF {
                 r++
                 if (r > n) {
-                    print "entry " r ": unexpected (scores.csv implies only " n " PBs)"; exit
+                    print "entry " r ": unexpected (scores.csv implies only " n " PBs)"
+                    failed = 1; exit
                 }
                 if ($3+0 != pb_c[r] || $1 != pb_d[r] || $2 != pb_t[r]) {
                     print "entry " r ": expected " pb_d[r] "," pb_t[r] "," pb_c[r] \
                           " got " $1 "," $2 "," $3
-                    exit
+                    failed = 1; exit
                 }
             }
             END {
-                if (r+0 < n)
+                if (!failed && r+0 < n)
                     print "has " r+0 " entries, expected " n " from scores.csv"
             }
         ' "$DATA_FILE" "$PB_FILE")
