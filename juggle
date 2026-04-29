@@ -4628,7 +4628,7 @@ show_doctor() {
         local _k
         for _k in "${_CODEX_ALL_KEYS[@]}"; do _valid["$_k"]=1; done
         local -a _unknowns=()
-        while IFS=',' read -r _key _; do
+        while IFS=',' read -r _key _ || [[ -n "$_key" ]]; do
             [[ -z "$_key" ]] && continue
             [[ -z "${_valid[$_key]+x}" ]] && _unknowns+=("$_key")
         done < "$CODEX_FILE"
