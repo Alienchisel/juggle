@@ -4426,8 +4426,8 @@ check_backup_reminder() {
 }
 
 # ── Doctor ─────────────────────────────────────────────────────────────────────
-_dr_ok()   { (( _DR_PASS++ )); echo -e "  ${GREEN}✓${RESET}  $1"; }
-_dr_err()  { (( _DR_FAIL++ )); echo -e "  ${RED}✗${RESET}  $1"; }
+_dr_ok()   { (( ++_DR_PASS )); echo -e "  ${GREEN}✓${RESET}  $1"; }
+_dr_err()  { (( ++_DR_FAIL )); echo -e "  ${RED}✗${RESET}  $1"; }
 _dr_head() { echo -e "\n  ${DIM}── $1 ─────────────────────────────${RESET}"; }
 
 _dr_csv() {
@@ -4502,7 +4502,7 @@ show_doctor() {
     # ── Codex key integrity ────────────────────────────────────────────────────
     _dr_head "Codex integrity"
     if [[ ! -f "$CODEX_FILE" ]]; then
-        _dr_err "codex.csv missing — skipping key checks"
+        echo -e "  ${DIM}↳  codex.csv missing — skipping key checks${RESET}"
     else
         local dupes; dupes=$(awk -F',' 'NF{print $1}' "$CODEX_FILE" | sort | uniq -d | tr '\n' ' ')
         if [[ -n "$dupes" ]]; then
