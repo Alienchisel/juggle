@@ -117,7 +117,7 @@ Rolling average of the last 20 trials. Fires once on first qualifying trial; req
 | Key | Name | Condition | Notes |
 |-----|------|-----------|-------|
 | `ARCHIVIST` | The Archivist | `25` Codex entries discovered | Uses live count of `codex.csv` entries; no backfill needed (fires on next qualifying trial) |
-| `OMNIA` | Omnia | All other Codex entries discovered | `_omnia_total` in `check_codex` must be updated when new entries are added |
+| `OMNIA` | Omnia | All other Codex entries discovered | Fires when all keys except `OMNIA` itself are discovered; count derived dynamically from `_CODEX_ALL_KEYS` |
 
 ---
 

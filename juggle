@@ -16,10 +16,15 @@
 #   juggle month [YYYY-MM] Monthly recap (default: current month)
 #   juggle year  [YYYY]    Yearly recap (default: current year)
 #   juggle last           Show the most recent entry
+#   juggle last <N>       Show the last N entries
 #   juggle undo           Remove the most recent entry (with confirmation)
 #   juggle lore           Explain all systems (Omens, Auguries, Grades, Titles, etc.)
 #   juggle codex          The Codex: permanent discoveries & achievements
 #   juggle backup         Snapshot juggle-data/ to a timestamped backup
+#   juggle goal           Show goal and progress
+#   juggle goal <N>       Set target catch count
+#   juggle goal clear     Remove the current goal
+#   juggle doctor         Validate data & registry integrity
 #   juggle --help         Show usage help
 #
 # Data files (default: alongside this script in ./juggle-data/; override with $JUGGLE_DATA_DIR):
@@ -4420,6 +4425,147 @@ check_backup_reminder() {
     fi
 }
 
+# ── Doctor ─────────────────────────────────────────────────────────────────────
+_dr_ok()   { (( _DR_PASS++ )); echo -e "  ${GREEN}✓${RESET}  $1"; }
+_dr_err()  { (( _DR_FAIL++ )); echo -e "  ${RED}✗${RESET}  $1"; }
+_dr_head() { echo -e "\n  ${DIM}── $1 ─────────────────────────────${RESET}"; }
+
+_dr_csv() {
+    local path="$1" label="$2" expect="$3"
+    if [[ ! -f "$path" ]]; then
+        _dr_err "${label}: file missing"; return
+    fi
+    local bad; bad=$(awk -F',' -v n="$expect" 'NF && NF!=n {print NR; exit}' "$path")
+    if [[ -n "$bad" ]]; then
+        local af; af=$(awk -F',' -v r="$bad" 'NR==r{print NF}' "$path")
+        _dr_err "${label}: row ${bad} has ${af} fields (expected ${expect})"
+    else
+        local cnt; cnt=$(awk 'NF' "$path" | wc -l)
+        _dr_ok "${label}: ${cnt} row(s), ${expect} fields each"
+    fi
+}
+
+show_doctor() {
+    _DR_PASS=0; _DR_FAIL=0
+
+    gum_header "IVGVLATOR"$'\n'"· DOCTOR ·"
+    echo ""
+
+    # ── Schema ────────────────────────────────────────────────────────────────
+    _dr_head "Schema"
+    if [[ ! -f "$SCHEMA_VERSION_FILE" ]]; then
+        _dr_err "schema version file missing"
+    else
+        local sv; sv=$(< "$SCHEMA_VERSION_FILE")
+        if [[ "$sv" == "$_CURRENT_SCHEMA" ]]; then
+            _dr_ok "schema version: ${sv}"
+        else
+            _dr_err "schema mismatch — disk: ${sv}, expected: ${_CURRENT_SCHEMA}"
+        fi
+    fi
+
+    # ── CSV integrity ──────────────────────────────────────────────────────────
+    _dr_head "CSV integrity"
+    _dr_csv "$DATA_FILE"      "scores.csv"     4
+    _dr_csv "$MILESTONE_FILE" "milestones.csv" 3
+    _dr_csv "$PB_FILE"        "pb_history.csv" 3
+    _dr_csv "$CODEX_FILE"     "codex.csv"      2
+    if [[ ! -f "$STREAK_FILE" ]]; then
+        _dr_err "streak_state.csv: file missing"
+    else
+        local sf; sf=$(awk -F',' 'NF{print NF; exit}' "$STREAK_FILE")
+        if [[ "$sf" == "5" ]]; then
+            _dr_ok "streak_state.csv: 5 fields"
+        else
+            _dr_err "streak_state.csv: ${sf:-0} fields (expected 5)"
+        fi
+    fi
+
+    # ── Required state files ───────────────────────────────────────────────────
+    _dr_head "State files"
+    local -a _req=(
+        "$WITNESS_FILE:witness_count"
+        "$NEMESIS_FILE:nemesis_state"
+        "$TITLE_STATE_FILE:title_state"
+        "$DOMINANCE_STREAK_FILE:dominance_streak"
+        "$AVG_TREND_FILE:avg_trend"
+    )
+    local _s
+    for _s in "${_req[@]}"; do
+        if [[ -f "${_s%%:*}" ]]; then
+            _dr_ok "${_s##*:}"
+        else
+            _dr_err "${_s##*:}: missing"
+        fi
+    done
+
+    # ── Codex key integrity ────────────────────────────────────────────────────
+    _dr_head "Codex integrity"
+    if [[ ! -f "$CODEX_FILE" ]]; then
+        _dr_err "codex.csv missing — skipping key checks"
+    else
+        local dupes; dupes=$(awk -F',' 'NF{print $1}' "$CODEX_FILE" | sort | uniq -d | tr '\n' ' ')
+        if [[ -n "$dupes" ]]; then
+            _dr_err "duplicate keys: ${dupes% }"
+        else
+            _dr_ok "no duplicate keys"
+        fi
+
+        local -A _valid=()
+        local _k
+        for _k in "${_CODEX_ALL_KEYS[@]}"; do _valid["$_k"]=1; done
+        local -a _unknowns=()
+        while IFS=',' read -r _key _; do
+            [[ -z "$_key" ]] && continue
+            [[ -z "${_valid[$_key]+x}" ]] && _unknowns+=("$_key")
+        done < "$CODEX_FILE"
+        if (( ${#_unknowns[@]} > 0 )); then
+            _dr_err "unknown keys in codex.csv: ${_unknowns[*]}"
+        else
+            _dr_ok "all keys known"
+        fi
+    fi
+
+    # ── Registry / doc alignment ───────────────────────────────────────────────
+    _dr_head "Registry alignment"
+    local _ref="$SCRIPT_DIR/CODEX_REFERENCE.md"
+    if [[ ! -f "$_ref" ]]; then
+        _dr_err "CODEX_REFERENCE.md not found"
+    else
+        local -a _missing_from_ref=()
+        for _k in "${_CODEX_ALL_KEYS[@]}"; do
+            grep -q "\`${_k}\`" "$_ref" || _missing_from_ref+=("$_k")
+        done
+        if (( ${#_missing_from_ref[@]} > 0 )); then
+            _dr_err "in _CODEX_ALL_KEYS, missing from doc: ${_missing_from_ref[*]}"
+        else
+            _dr_ok "all registry keys present in CODEX_REFERENCE.md"
+        fi
+
+        local -A _reg=()
+        for _k in "${_CODEX_ALL_KEYS[@]}"; do _reg["$_k"]=1; done
+        local -a _extra=()
+        while IFS= read -r _dk; do
+            [[ -z "${_reg[$_dk]+x}" ]] && _extra+=("$_dk")
+        done < <(grep -o '`[A-Z][A-Z_0-9]*`' "$_ref" | tr -d '`' | sort -u)
+        if (( ${#_extra[@]} > 0 )); then
+            _dr_err "in doc, not in _CODEX_ALL_KEYS: ${_extra[*]}"
+        else
+            _dr_ok "no undeclared keys in CODEX_REFERENCE.md"
+        fi
+    fi
+
+    # ── Summary ────────────────────────────────────────────────────────────────
+    echo ""
+    echo -e "  ${DIM}──────────────────────────────────────${RESET}"
+    local _total=$(( _DR_PASS + _DR_FAIL ))
+    if (( _DR_FAIL == 0 )); then
+        echo -e "\n  ${GREEN}${BOLD}All checks passed${RESET}  ${DIM}(${_DR_PASS}/${_total})${RESET}\n"
+    else
+        echo -e "\n  ${RED}${BOLD}${_DR_FAIL} issue(s) found${RESET}  ${DIM}(${_DR_PASS}/${_total} passed)${RESET}\n"
+    fi
+}
+
 usage() {
     echo ""
     echo -e "  ${BOLD}IVGVLATOR${RESET} — personal 3-ball juggling score tracker"
@@ -4445,6 +4591,7 @@ usage() {
     echo -e "    juggle goal               Show current goal and progress"
     echo -e "    juggle goal ${CYAN}<N>${RESET}           Set a target catch count"
     echo -e "    juggle goal clear         Remove the current goal"
+    echo -e "    juggle doctor             Validate data & registry integrity"
     echo -e "    juggle --help             Show this help"
     echo ""
     echo -e "  ${DIM}Data stored in: ${DATA_DIR}/${RESET}"
@@ -4535,6 +4682,9 @@ case "$1" in
     goal)
         goal_cmd "$2"
         ;;
+    doctor)
+        show_doctor
+        ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 )); then
             log_score "$1"
@@ -4545,4 +4695,4 @@ case "$1" in
         ;;
 esac
 
-case "$1" in backup|goal|--help|-h|"") ;; *) check_backup_reminder ;; esac
+case "$1" in backup|goal|doctor|--help|-h|"") ;; *) check_backup_reminder ;; esac
