@@ -4440,6 +4440,18 @@ _dr_state() {
     fi
 }
 
+# Validate calendar dates in column $field via GNU date round-trip.
+# Echoes the first invalid date, or empty on success.
+_dr_dates() {
+    local path="$1" field="$2"
+    local _bad _c _d
+    while IFS= read -r _d; do
+        _c=$(date -d "$_d" +%Y-%m-%d 2>/dev/null)
+        [[ "$_c" == "$_d" ]] || { _bad="$_d"; break; }
+    done < <(awk -F',' -v f="$field" 'NF && $f~/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/{print $f}' "$path" | sort -u)
+    echo "$_bad"
+}
+
 _dr_csv() {
     local path="$1" label="$2" expect="$3"
     if [[ ! -f "$path" ]]; then
@@ -4501,6 +4513,9 @@ show_doctor() {
                     { print "row " NR ": bad date " $1; exit }
                 if ($2 !~ /^[0-9]{2}:[0-9]{2}:[0-9]{2}$/)
                     { print "row " NR ": bad time " $2; exit }
+                split($2, t, ":")
+                if (t[1]+0 > 23 || t[2]+0 > 59 || t[3]+0 > 59)
+                    { print "row " NR ": time out of range " $2; exit }
                 if ($3 !~ /^[0-9]+$/ || $3+0 < 1)
                     { print "row " NR ": bad catches " $3; exit }
                 if ($4 != "SSS" && $4 != "SS" && $4 != "S" && $4 != "A" &&
@@ -4508,7 +4523,13 @@ show_doctor() {
                     { print "row " NR ": bad grade " $4; exit }
             }
         ' "$DATA_FILE")
-        [[ -n "$_sv" ]] && _dr_err "scores.csv: ${_sv}" || _dr_ok "scores.csv: values valid"
+        if [[ -n "$_sv" ]]; then
+            _dr_err "scores.csv: ${_sv}"
+        else
+            local _bd; _bd=$(_dr_dates "$DATA_FILE" 1)
+            [[ -n "$_bd" ]] && _dr_err "scores.csv: invalid calendar date ${_bd}" \
+                            || _dr_ok "scores.csv: values valid"
+        fi
     fi
 
     if [[ -f "$PB_FILE" ]]; then
@@ -4518,6 +4539,9 @@ show_doctor() {
                     { print "row " NR ": bad date " $1; exit }
                 if ($2 !~ /^[0-9]{2}:[0-9]{2}:[0-9]{2}$/)
                     { print "row " NR ": bad time " $2; exit }
+                split($2, t, ":")
+                if (t[1]+0 > 23 || t[2]+0 > 59 || t[3]+0 > 59)
+                    { print "row " NR ": time out of range " $2; exit }
                 if ($3 !~ /^[0-9]+$/ || $3+0 < 1)
                     { print "row " NR ": bad catches " $3; exit }
                 if (NR > 1 && $3+0 <= prev)
@@ -4525,7 +4549,13 @@ show_doctor() {
                 prev = $3+0
             }
         ' "$PB_FILE")
-        [[ -n "$_pv" ]] && _dr_err "pb_history.csv: ${_pv}" || _dr_ok "pb_history.csv: values valid"
+        if [[ -n "$_pv" ]]; then
+            _dr_err "pb_history.csv: ${_pv}"
+        else
+            local _bd; _bd=$(_dr_dates "$PB_FILE" 1)
+            [[ -n "$_bd" ]] && _dr_err "pb_history.csv: invalid calendar date ${_bd}" \
+                            || _dr_ok "pb_history.csv: values valid"
+        fi
     fi
 
     if [[ -f "$MILESTONE_FILE" ]]; then
@@ -4539,7 +4569,13 @@ show_doctor() {
                     { print "row " NR ": bad date " $3; exit }
             }
         ' "$MILESTONE_FILE")
-        [[ -n "$_mv" ]] && _dr_err "milestones.csv: ${_mv}" || _dr_ok "milestones.csv: values valid"
+        if [[ -n "$_mv" ]]; then
+            _dr_err "milestones.csv: ${_mv}"
+        else
+            local _bd; _bd=$(_dr_dates "$MILESTONE_FILE" 3)
+            [[ -n "$_bd" ]] && _dr_err "milestones.csv: invalid calendar date ${_bd}" \
+                            || _dr_ok "milestones.csv: values valid"
+        fi
     fi
 
     if [[ -f "$CODEX_FILE" ]]; then
@@ -4549,7 +4585,13 @@ show_doctor() {
                     { print "row " NR ": bad date " $2; exit }
             }
         ' "$CODEX_FILE")
-        [[ -n "$_cv" ]] && _dr_err "codex.csv: ${_cv}" || _dr_ok "codex.csv: dates valid"
+        if [[ -n "$_cv" ]]; then
+            _dr_err "codex.csv: ${_cv}"
+        else
+            local _bd; _bd=$(_dr_dates "$CODEX_FILE" 2)
+            [[ -n "$_bd" ]] && _dr_err "codex.csv: invalid calendar date ${_bd}" \
+                            || _dr_ok "codex.csv: dates valid"
+        fi
     fi
 
     if [[ -f "$STREAK_FILE" ]]; then
@@ -4629,12 +4671,36 @@ show_doctor() {
     # ── Cross-file consistency ─────────────────────────────────────────────────
     _dr_head "Consistency"
     if [[ -f "$DATA_FILE" && -f "$PB_FILE" ]]; then
-        local _max_score; _max_score=$(awk -F',' 'NF{if($3+0>m)m=$3+0}END{print m+0}' "$DATA_FILE")
-        local _pb_last;   _pb_last=$(awk -F',' 'NF{last=$3+0}END{print last+0}' "$PB_FILE")
-        if [[ "$_max_score" == "$_pb_last" ]]; then
-            _dr_ok "PB consistent: ${_max_score}"
+        # Replay PB sequence from scores.csv and compare every row to pb_history.csv.
+        local _cons; _cons=$(awk -F',' '
+            FNR==NR {
+                if (NF && $3+0 > max) {
+                    max = $3+0; n++
+                    pb_d[n] = $1; pb_t[n] = $2; pb_c[n] = $3+0
+                }
+                next
+            }
+            NF {
+                r++
+                if (r > n) {
+                    print "entry " r ": unexpected (scores.csv implies only " n " PBs)"; exit
+                }
+                if ($3+0 != pb_c[r] || $1 != pb_d[r] || $2 != pb_t[r]) {
+                    print "entry " r ": expected " pb_d[r] "," pb_t[r] "," pb_c[r] \
+                          " got " $1 "," $2 "," $3
+                    exit
+                }
+            }
+            END {
+                if (r+0 < n)
+                    print "has " r+0 " entries, expected " n " from scores.csv"
+            }
+        ' "$DATA_FILE" "$PB_FILE")
+        if [[ -n "$_cons" ]]; then
+            _dr_err "pb_history.csv: ${_cons}"
         else
-            _dr_err "PB mismatch: scores.csv max=${_max_score}, pb_history.csv last=${_pb_last}"
+            local _apex; _apex=$(awk -F',' 'NF{last=$3+0}END{print last+0}' "$PB_FILE")
+            _dr_ok "PB history complete and consistent (apex: ${_apex})"
         fi
     else
         echo -e "  ${DIM}↳  skipping (files missing)${RESET}"
