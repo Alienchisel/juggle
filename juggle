@@ -4606,9 +4606,16 @@ usage() {
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+check_dependencies
+
+# doctor must run before init_data so it observes true on-disk state
+if [[ "$1" == "doctor" ]]; then
+    show_doctor
+    exit $(( _DR_FAIL > 0 ))
+fi
+
 init_data
 load_caches
-check_dependencies
 
 case "$1" in
     ''|--help|-h)
@@ -4681,9 +4688,6 @@ case "$1" in
         ;;
     goal)
         goal_cmd "$2"
-        ;;
-    doctor)
-        show_doctor
         ;;
     *)
         if [[ "$1" =~ ^[0-9]+$ ]] && (( $1 >= 1 )); then
