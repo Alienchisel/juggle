@@ -4718,6 +4718,14 @@ show_doctor() {
     fi
 }
 
+_juggle_version() {
+    (cd "$SCRIPT_DIR" 2>/dev/null && git describe --tags --always --dirty 2>/dev/null) || echo "unknown"
+}
+
+show_version() {
+    echo "juggle $(_juggle_version)"
+}
+
 usage() {
     echo ""
     echo -e "  ${BOLD}IVGVLATOR${RESET} — personal 3-ball juggling score tracker"
@@ -4744,6 +4752,7 @@ usage() {
     echo -e "    juggle goal ${CYAN}<N>${RESET}           Set a target catch count"
     echo -e "    juggle goal clear         Remove the current goal"
     echo -e "    juggle doctor             Validate data & registry integrity"
+    echo -e "    juggle --version          Show version"
     echo -e "    juggle --help             Show this help"
     echo ""
     echo -e "  ${DIM}Data stored in: ${DATA_DIR}/${RESET}"
@@ -4754,9 +4763,14 @@ usage() {
     echo -e "  ${DIM}  streak_state.csv — chain / omen state${RESET}"
     echo -e "  ${DIM}  codex.csv        — discovery log (key,date)${RESET}"
     echo ""
+    echo -e "  ${DIM}$(show_version)${RESET}"
+    echo ""
 }
 
 # ── Main ───────────────────────────────────────────────────────────────────────
+
+# --version handled before any setup so it works without dependencies/data
+case "$1" in --version|-v) show_version; exit 0 ;; esac
 
 check_dependencies
 
